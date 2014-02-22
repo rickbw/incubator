@@ -37,6 +37,11 @@ the License.
             <version>14.0.1</version>
             <scope>compile</scope>
         </dependency>
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-core</artifactId>
+            <version>3.6.5.Final</version>
+        </dependency>
     </dependencies>
 
     <profiles>
