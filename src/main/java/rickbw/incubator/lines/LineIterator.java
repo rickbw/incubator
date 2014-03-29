@@ -34,12 +34,22 @@ import com.google.common.collect.AbstractIterator;
  * <em>not</em> considered an element by this iterator, and will not be
  * returned.
  *
- * This class implements {@link Iterator}, not {@link Iterable}, because it
- * accepts an already-opened {@link Reader} (or {@link InputStream}). Thus,
- * the input is inherently consumed as it is read, and cannot be read a
- * second time by calling {@link Iterable#iterator()} again. An
- * {@link Iterable} implementation would have to accept a file path, URL, or
- * other source, and open the stream itself.
+ * Here's an example:
+ * <code>
+ *  try (LineIterator it = LineIterator.iterator(myInputStream)) {
+ *      // Wrapping in try-with-resources, or closing explicitly at all, is
+ *      // optional. The iterator will close itself when !hasNext().
+ *      while (it.hasNext()) {
+ *          String line = it.next();
+ *          // ...do cool stuff
+ *      }
+ *  }
+ * </code>
+ *
+ * If you need the ability to restart iteration, use {@link LineIterable},
+ * which wraps this class.
+ *
+ * @see #iterator(Reader)
  */
 public final class LineIterator
 extends AbstractIterator<String>
@@ -48,16 +58,18 @@ implements Iterator<String>, Closeable {
     private final BufferedReader reader;
 
 
-    public LineIterator(final Reader reader) {
-        if (reader instanceof BufferedReader) {
-            this.reader = (BufferedReader) reader;
-        } else {
-            this.reader = new BufferedReader(reader);
-        }
+    /**
+     * @see #iteratorFromStream(InputStream)
+     */
+    public static LineIterator iterator(final Reader reader) {
+        return new LineIterator(reader);
     }
 
-    public LineIterator(final InputStream stream ) {
-        this.reader = new BufferedReader(new InputStreamReader(stream));
+    /**
+     * @see #iterator(Reader)
+     */
+    public static LineIterator iteratorFromStream(final InputStream stream ) {
+        return new LineIterator(new InputStreamReader(stream));
     }
 
     @Override
@@ -76,6 +88,14 @@ implements Iterator<String>, Closeable {
             return line;
         } catch (final IOException iox) {
             throw new IllegalStateException(iox);
+        }
+    }
+
+    private LineIterator(final Reader reader) {
+        if (reader instanceof BufferedReader) {
+            this.reader = (BufferedReader) reader;
+        } else {
+            this.reader = new BufferedReader(reader);
         }
     }
 
