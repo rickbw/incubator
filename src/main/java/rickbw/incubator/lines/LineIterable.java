@@ -27,6 +27,8 @@ import java.util.concurrent.Callable;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 
+import rickbw.incubator.supplier.MoreSuppliers;
+
 
 /**
  * An {@link Iterable} backed by lines of text from a {@link Reader}. The
@@ -74,19 +76,7 @@ public final class LineIterable implements Iterable<String> {
      * @see #from(Supplier)
      */
     public static LineIterable fromCallable(final Callable<? extends Reader> provider) {
-        Preconditions.checkNotNull(provider);
-        final Supplier<Reader> supplier = new Supplier<Reader>() {
-            @Override
-            public Reader get() {
-                try {
-                    return provider.call();
-                } catch (final RuntimeException rex) {
-                    throw rex;
-                } catch (final Exception ex) {
-                    throw new IllegalStateException(ex);
-                }
-            }
-        };
+        final Supplier<Reader> supplier = MoreSuppliers.fromCallable(provider);
         return new LineIterable(supplier);
     }
 
