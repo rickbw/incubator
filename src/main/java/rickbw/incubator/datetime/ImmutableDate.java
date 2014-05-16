@@ -14,10 +14,6 @@
  */
 package rickbw.incubator.datetime;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.sql.Timestamp;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
@@ -29,9 +25,12 @@ import java.util.concurrent.TimeUnit;
  * <em>believe</em> that no one is supposed to change them, then you can
  * enforce that by using this class.
  */
-public final class ImmutableDate extends Date {
+public final class ImmutableDate extends ComparableDate {
 
-    private static final long serialVersionUID = -2145042019359276634L;
+    /**
+     * The serialVersionUID from our superclass, {@link ComparableDate}.
+     */
+    private static final long serialVersionUID = 7523967970034938905L;
 
 
     /**
@@ -55,7 +54,7 @@ public final class ImmutableDate extends Date {
     public static ImmutableDate copyOf(final Date date) {
         return (date instanceof ImmutableDate)
                 ? (ImmutableDate) date
-                : new ImmutableDate(date.getTime());
+                : atMillisSinceEpoch(date.getTime());
     }
 
     /**
@@ -101,54 +100,6 @@ public final class ImmutableDate extends Date {
     @Override
     public ImmutableDate clone() {
         return this;    // no need to copy
-    }
-
-    /**
-     * Implements {@code java.util.Date}'s equality contract, with small
-     * modifications to provide commutativity.
-     * <ol>
-     *  <li>Like with the inherited implementation, this class considers its
-     *      instances to be equal to any object of exactly type
-     *      {@code java.util.Date}, or exactly this type, that has the same
-     *      {@link #getTime() millisecond time} value.</li>
-     *  <li>Unlike with the inherited implementation, this class never
-     *      considers its instances equal to SQL {@link Timestamp}s, because
-     *      {@code Timestamp} does not consider its instances to be equal to
-     *      concrete {@code java.util.Date}s, and equality should always be
-     *      commutative.</li>
-     *  <li>Like with the inherited implementation, this class considers
-     *      its instances equal to SQL {@link java.sql.Date}s and SQL
-     *      {@code java.sql.Times}s with equal millisecond times, even though
-     *      they have different implied precisions than
-     *      {@code java.util.Date}s, for the same reason. Concrete
-     *      {@code java.sql.Date}, {@code java.sql.Time}, and
-     *      {@code java.util.Date} instances will consider one another equal
-     *      if they have the same millisecond time values, and this class
-     *      honors that behavior.</li>
-     *  <li>Equality with {@code java.util.Date} subclasses other than those
-     *      mentioned here is undefined.</li>
-     * </ol>
-     */
-    @Override
-    public boolean equals(final Object obj) {
-        // Short-circuit super for a speedup:
-        if (obj == null) {
-            return false;
-        }
-        if (obj == this) {
-            return true;
-        }
-
-        // Default implementation:
-        if (!super.equals(obj)) {
-            return false;
-        }
-
-        /* Exclude SQL Timestamps:
-         * (Timestamp instances don't consider themselves equal to
-         * java.util.Dates. Be symmetrical.)
-         */
-        return !(obj instanceof Timestamp);
     }
 
     /**
@@ -220,25 +171,6 @@ public final class ImmutableDate extends Date {
 
     private ImmutableDate(final long date) {
         super(date);    // construct only with factory methods
-    }
-
-    /**
-     * Save the state of this object to a stream (i.e., serialize it).
-     *
-     * @serialData The value returned by <code>getTime()</code>
-     *             is emitted (long).  This represents the offset from
-     *             January 1, 1970, 00:00:00 GMT in milliseconds.
-     */
-    private void writeObject(final ObjectOutputStream stream) throws IOException {
-        stream.writeLong(getTime());
-    }
-
-    /**
-     * Reconstitute this object from a stream (i.e., deserialize it).
-     */
-    private void readObject(final ObjectInputStream stream) throws IOException {
-        // Mutation! Fortunately, no one can observe us during this time.
-        super.setTime(stream.readLong());
     }
 
 }
