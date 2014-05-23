@@ -40,7 +40,7 @@ import org.hibernate.Transaction;
  *   }   // When we get here, session will close automatically.
  * <pre>
  */
-public final class CloseableSession implements AutoCloseable {
+public class CloseableSession implements AutoCloseable {
 
     private final Session delegate;
 
@@ -96,12 +96,20 @@ public final class CloseableSession implements AutoCloseable {
     /**
      * Get a wrapper for the current session, obtained as with
      * {@link SessionFactory#getCurrentSession()}.
+     * Unlike all of the other sessions returned by the factory methods of
+     * this class, those returned by this method will not be automatically
+     * closed. That is, {@link #close()} will do nothing.
      *
      * @throws  HibernateException  if an error occurs.
      */
     public static CloseableSession getCurrentSession(final SessionFactory sessionFactory) {
         final Session session = sessionFactory.getCurrentSession();
-        return from(session);
+        return new CloseableSession(session) {
+            @Override
+            public void close() {
+                // don't close shared session
+            }
+        };
     }
 
     public static CloseableSession from(final Session session) {
