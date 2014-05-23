@@ -31,26 +31,33 @@ public final class ImmutableProduct {
 
 
     /**
-     * The application requires that every product have a non-null serial
-     * number. The require attribute must also be non-null, but the optional
-     * attribute may be null. Note that applications shouldn't create
-     * instances directly; they should use a {@link Builder}.
+     * Applications shouldn't create Instances directly; they should use a
+     * {@link Builder}.
+     *
+     * @see #newBuilder()
+     * @see #toBuilder()
      */
-    private ImmutableProduct(
-            final String serialNumber,
-            final String someRequiredAttribute,
-            final String someOptionalAttribute) {
-        this.state = new ProductVo();
-        this.state.setSerialNumber(Preconditions.checkNotNull(serialNumber));
-        this.state.setSomeRequiredAttribute(Preconditions.checkNotNull(someRequiredAttribute));
-        this.state.setSomeOptionalAttribute(someOptionalAttribute); // may be null
+    private ImmutableProduct(final ProductVo source) {
+        this.state = new ProductVo(source);
+        Preconditions.checkArgument(source.getSerialNumber() != null);
+        Preconditions.checkArgument(source.getSomeRequiredAttribute() != null);
+        // optional attribute may be null
     }
 
     /**
-     * This is how applications will actually create brand new objects.
+     * This is how applications will actually create brand new objects, e.g.
+     * to insert as new rows into the database.
      */
     public static Builder newBuilder() {
         return new Builder();
+    }
+
+    /**
+     * This is how applications "modify" existing entities, e.g. to update in
+     * the database.
+     */
+    public Builder toBuilder() {
+        return new Builder(this.state);
     }
 
     /**
@@ -61,9 +68,7 @@ public final class ImmutableProduct {
      * this example class doesn't expose it.
      */
     public String getSerialNumber() {
-        final String serial = this.state.getSerialNumber();
-        assert serial != null;
-        return serial;
+        return this.state.getSerialNumber();
     }
 
     /**
@@ -71,9 +76,7 @@ public final class ImmutableProduct {
      * be null.
      */
     public String getSomeRequiredAttribute() {
-        final String required = this.state.getSomeRequiredAttribute();
-        assert required != null;
-        return required;
+        return this.state.getSomeRequiredAttribute();
     }
 
     /**
@@ -133,9 +136,9 @@ public final class ImmutableProduct {
     @Override
     public String toString() {
         return getClass().getSimpleName()
-                + " [getSerialNumber()=" + this.getSerialNumber()
-                + ", getSomeRequiredAttribute()=" + this.getSomeRequiredAttribute()
-                + ", getSomeOptionalAttribute()=" + this.getSomeOptionalAttribute()
+                + " [serialNumber=" + this.getSerialNumber()
+                + ", someRequiredAttribute=" + this.getSomeRequiredAttribute()
+                + ", someOptionalAttribute=" + this.getSomeOptionalAttribute()
                 + "]";
     }
 
@@ -146,34 +149,33 @@ public final class ImmutableProduct {
      * construct it with a Builder.
      */
     public static final class Builder {
-        private String serialNumber = null;
-        private String someRequiredAttribute = null;
-        private String someOptionalAttribute = null;
+        private final ProductVo state;
 
         private Builder() {
-            // nothing to do
+            this.state = new ProductVo();
+        }
+
+        private Builder(final ProductVo source) {
+            this.state = new ProductVo(source);
         }
 
         public Builder serialNumber(final String serial) {
-            this.serialNumber = serial;
+            this.state.setSerialNumber(serial);
             return this;
         }
 
         public Builder someRequiredAttribute(final String attribute) {
-            this.someRequiredAttribute = attribute;
+            this.state.setSomeRequiredAttribute(attribute);
             return this;
         }
 
         public Builder someOptionalAttribute(final String attribute) {
-            this.someOptionalAttribute = attribute;
+            this.state.setSomeOptionalAttribute(attribute);
             return this;
         }
 
         public ImmutableProduct build() {
-            return new ImmutableProduct(
-                    this.serialNumber,
-                    this.someRequiredAttribute,
-                    this.someOptionalAttribute);
+            return new ImmutableProduct(this.state);
         }
     }
 }

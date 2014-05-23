@@ -41,11 +41,17 @@ import javax.persistence.Table;
 
 
     /**
-     * Hibernate requires a no-argument constructor. Hibernate's the only
-     * caller, so this is the only constructor we need.
+     * Hibernate requires a no-argument constructor.
      */
     public ProductVo() {
         // nothing to do
+    }
+
+    public ProductVo(final ProductVo source) {
+        this.serialNumber = source.getSerialNumber();
+        this.id = source.getId();
+        this.someRequiredAttribute = source.getSomeRequiredAttribute();
+        this.someOptionalAttribute = source.getSomeOptionalAttribute();
     }
 
     /**
