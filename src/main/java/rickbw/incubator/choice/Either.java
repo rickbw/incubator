@@ -12,7 +12,6 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package rickbw.incubator.choice;
 
 import static rickbw.incubator.choice.Nothing.nothing;
@@ -32,7 +31,7 @@ import com.google.common.base.Supplier;
  * on their argument lists nor return it. Passing a null with throw
  * {@link NullPointerException}.
  */
-public abstract class Either<FIRST, SECOND> {
+public abstract class Either<LEFT, RIGHT> {
     /* Design rationale: This class is designed for fast deterministic
      * behavior. After its construction, it does not allocate any new objects,
      * and it does not branch. The former avoids the time overhead of
@@ -46,7 +45,7 @@ public abstract class Either<FIRST, SECOND> {
      * {@link Optional#isPresent()}).
      *
      * <b>Design rationale</b>: Why wrap it in an Optional? We want to be able
-     * to provide it as an Optional (see e.g. {@link #firstAsOptional()}), so
+     * to provide it as an Optional (see e.g. {@link #leftAsOptional()}), so
      * we have the choice to either store it bare and wrap it in that call, or
      * to store it wrapped and unwrap it in e.g. {@link #get()}. Wrapping
      * requires the allocation of a new heap object and subsequent garbage-
@@ -58,32 +57,32 @@ public abstract class Either<FIRST, SECOND> {
 
 
     /**
-     * Return an Either for which {@link #first()} will return the given
-     * object and {@link #second()} will throw {@link IllegalStateException}.
+     * Return an Either for which {@link #left()} will return the given
+     * object and {@link #right()} will throw {@link IllegalStateException}.
      */
-    public static <F, S> Either<F, S> first(final F value) {
-        return new First<>(Optional.of(value));
+    public static <F, S> Either<F, S> left(final F value) {
+        return new Left<>(Optional.of(value));
     }
 
     /**
-     * Return an Either for which {@link #second()} will return the given
-     * object and {@link #first()} will throw {@link IllegalStateException}.
+     * Return an Either for which {@link #right()} will return the given
+     * object and {@link #left()} will throw {@link IllegalStateException}.
      */
-    public static <F, S> Either<F, S> second(final S value) {
-        return new Second<>(Optional.of(value));
+    public static <F, S> Either<F, S> right(final S value) {
+        return new Right<>(Optional.of(value));
     }
 
     /**
-     * @return  Either the first argument, if it is present, or the result
-     *          supplied by the second.
+     * @return  Either the "left" argument, if it is present, or the result
+     *          supplied by the "right".
      */
-    public static <F, S> Either<F, S> firstOrSecond(
-            final Optional<F> first,
-            final Supplier<S> second) {
-        if (first.isPresent()) {
-            return new First<>(first);
+    public static <F, S> Either<F, S> leftOrRight(
+            final Optional<F> left,
+            final Supplier<S> right) {
+        if (left.isPresent()) {
+            return new Left<>(left);
         } else {
-            return second(second.get());
+            return right(right.get());
         }
     }
 
@@ -96,9 +95,9 @@ public abstract class Either<FIRST, SECOND> {
      */
     public static <F> Either<F, Nothing> presentOrNothing(final Optional<F> value) {
         if (value.isPresent()) {
-            return new First<>(value);
+            return new Left<>(value);
         } else {
-            return second(nothing);
+            return right(nothing);
         }
     }
 
@@ -111,9 +110,9 @@ public abstract class Either<FIRST, SECOND> {
     public static <T> Either<T, Exception> call(final Callable<T> callable) {
         try {
             final T result = callable.call();
-            return first(result);
+            return left(result);
         } catch (final Exception ex) {
-            return second(ex);
+            return right(ex);
         }
     }
 
@@ -126,77 +125,77 @@ public abstract class Either<FIRST, SECOND> {
     public static <T> Either<T, RuntimeException> supply(final Supplier<T> supplier) {
         try {
             final T result = supplier.get();
-            return first(result);
+            return left(result);
         } catch (final RuntimeException ex) {
-            return second(ex);
+            return right(ex);
         }
     }
 
     /**
-     * If {@link #isFirstPresent()}, return the result of {@link #first()},
+     * If {@link #isLeftPresent()}, return the result of {@link #left()},
      * wrapped in an {@link Optional}. Otherwise, return
      * {@link Optional#absent()}.
      */
-    public Optional<FIRST> firstAsOptional() {
-        // Subclass First overrides this implementation
+    public Optional<LEFT> leftAsOptional() {
+        // Subclass Left overrides this implementation
         return Optional.absent();
     }
 
     /**
-     * If {@link #isSecondPresent()}, return the result of {@link #second()},
+     * If {@link #isRightPresent()}, return the result of {@link #right()},
      * wrapped in an {@link Optional}. Otherwise, return
      * {@link Optional#absent()}.
      */
-    public Optional<SECOND> secondAsOptional() {
-        // Subclass Second overrides this implementation
+    public Optional<RIGHT> rightAsOptional() {
+        // Subclass Right overrides this implementation
         return Optional.absent();
     }
 
     /**
-     * Return true if the "first" element of this Either is the one that is
-     * present. This result is equivalent to {@link #firstAsOptional()}
+     * Return true if the "left" element of this Either is the one that is
+     * present. This result is equivalent to {@link #leftAsOptional()}
      * followed by {@link Optional#isPresent()}.
      */
-    public final boolean isFirstPresent() {
-        return firstAsOptional().isPresent();
+    public final boolean isLeftPresent() {
+        return leftAsOptional().isPresent();
     }
 
     /**
-     * Return true if the "second" element of this Either is the one that is
-     * present. This result is equivalent to {@link #secondAsOptional()}
+     * Return true if the "right" element of this Either is the one that is
+     * present. This result is equivalent to {@link #rightAsOptional()}
      * followed by {@link Optional#isPresent()}.
      */
-    public final boolean isSecondPresent() {
-        return secondAsOptional().isPresent();
+    public final boolean isRightPresent() {
+        return rightAsOptional().isPresent();
     }
 
     /**
-     * Return the "first" element of this Either, assuming it is present.
+     * Return the "left" element of this Either, assuming it is present.
      *
-     * @throws  IllegalStateException   If the first element is not present
-     *                                  (and the second is).
+     * @throws  IllegalStateException   If the left element is not present
+     *                                  (and the right is).
      *
-     * @see #isFirstPresent()
+     * @see #isLeftPresent()
      */
-    public final FIRST first() {
-        return firstAsOptional().get();
+    public final LEFT left() {
+        return leftAsOptional().get();
     }
 
     /**
-     * Return the "second" element of this Either, assuming it is present.
+     * Return the "right" element of this Either, assuming it is present.
      *
-     * @throws  IllegalStateException   If the second element is not present
-     *                                  (and the first one is).
+     * @throws  IllegalStateException   If the right element is not present
+     *                                  (and the left one is).
      *
-     * @see #isSecondPresent()
+     * @see #isRightPresent()
      */
-    public final SECOND second() {
-        return secondAsOptional().get();
+    public final RIGHT right() {
+        return rightAsOptional().get();
     }
 
     /**
-     * Get the "first" element of this Either if {@link #isFirstPresent()} or
-     * the "second" element if {@link #isSecondPresent()}. In this case, the
+     * Get the "left" element of this Either if {@link #isLeftPresent()} or
+     * the "right" element if {@link #isRightPresent()}. In this case, the
      * application must take responsibility for type checking.
      */
     public final Object get() {
@@ -204,42 +203,42 @@ public abstract class Either<FIRST, SECOND> {
     }
 
     /**
-     * Return an Either in which the positions of the "first" and "second"
+     * Return an Either in which the positions of the "left" and "right"
      * elements are reversed.
      */
-    public abstract Either<SECOND, FIRST> swap();
+    public abstract Either<RIGHT, LEFT> swap();
 
     /**
-     * If the "first" element of this Either is present, apply the first of
-     * the given {@link Function} to it. Otherwise, if the "second" element is
+     * If the "left" element of this Either is present, apply the first of
+     * the given {@link Function}s to it. Otherwise, if the "right" element is
      * present, apply the second of the given Functions to it.
      *
      * @return  an Either that encapsulates the result of the only Function
      *          that was run.
      */
     public abstract <TOF, TOS> Either<TOF, TOS> map(
-            final Function<? super FIRST, ? extends TOF> firstFunc,
-            final Function<? super SECOND, ? extends TOS> secondFunc);
+            final Function<? super LEFT, ? extends TOF> leftFunc,
+            final Function<? super RIGHT, ? extends TOS> rightFunc);
 
     /**
-     * Return the result of applying the given function to the "first" element,
+     * Return the result of applying the given function to the "left" element,
      * if it is present. Otherwise, return {@link Optional#absent()}.
      *
-     * @param func  Applied to the "first" element, if it is present.
+     * @param func  Applied to the "left" element, if it is present.
      */
-    public <T> Optional<T> mapFirst(final Function<? super FIRST, ? extends T> func) {
-        // Subclass First overrides this implementation
+    public <T> Optional<T> mapLeft(final Function<? super LEFT, ? extends T> func) {
+        // Subclass Left overrides this implementation
         return Optional.absent();
     }
 
     /**
-     * Return the result of applying the given function to the "second"
+     * Return the result of applying the given function to the "right"
      * element, if it is present. Otherwise, return {@link Optional#absent()}.
      *
-     * @param func  Applied to the "second" element, if it is present.
+     * @param func  Applied to the "right" element, if it is present.
      */
-    public <T> Optional<T> mapSecond(final Function<? super SECOND, ? extends T> func) {
-        // Subclass Second overrides this implementation
+    public <T> Optional<T> mapRight(final Function<? super RIGHT, ? extends T> func) {
+        // Subclass Right overrides this implementation
         return Optional.absent();
     }
 
@@ -247,10 +246,10 @@ public abstract class Either<FIRST, SECOND> {
     public final String toString() {
         final StringBuilder buf = new StringBuilder(getClass().getSimpleName());
         buf.append('[');
-        if (isFirstPresent()) {
-            buf.append("first=").append(first());
+        if (isLeftPresent()) {
+            buf.append("left=").append(left());
         } else {
-            buf.append("second=").append(second());
+            buf.append("right=").append(right());
         }
         buf.append(']');
         return buf.toString();
@@ -260,8 +259,8 @@ public abstract class Either<FIRST, SECOND> {
     public final int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result + firstAsOptional().hashCode();
-        result = prime * result + secondAsOptional().hashCode();
+        result = prime * result + leftAsOptional().hashCode();
+        result = prime * result + rightAsOptional().hashCode();
         return result;
     }
 
@@ -278,14 +277,14 @@ public abstract class Either<FIRST, SECOND> {
         }
 
         final Either<?, ?> other = (Either<?, ?>) obj;
-        if (isFirstPresent() != other.isFirstPresent()) {
-            /* Allows us to short-circuit calling equals() on the "second"
+        if (isLeftPresent() != other.isLeftPresent()) {
+            /* Allows us to short-circuit calling equals() on the "right"
              * element. Assuming comparing booleans is cheaper than calling
              * equals() on some arbitrary object, this way should be faster.
              */
             return false;
         }
-        return firstAsOptional().equals(other.firstAsOptional());
+        return leftAsOptional().equals(other.leftAsOptional());
     }
 
     private Either(final Optional<?> value) {
@@ -294,67 +293,67 @@ public abstract class Either<FIRST, SECOND> {
     }
 
 
-    private static final class First<FIRST, SECOND> extends Either<FIRST, SECOND> {
-        public First(final Optional<FIRST> value) {
+    private static final class Left<LEFT, RIGHT> extends Either<LEFT, RIGHT> {
+        public Left(final Optional<LEFT> value) {
             super(value);
         }
 
         @SuppressWarnings("unchecked")
         @Override
-        public Optional<FIRST> firstAsOptional() {
-            return (Optional<FIRST>) get();
+        public Optional<LEFT> leftAsOptional() {
+            return (Optional<LEFT>) get();
         }
 
         @Override
-        public Either<SECOND, FIRST> swap() {
+        public Either<RIGHT, LEFT> swap() {
             // Eithers are immutable! No choice but to allocate a new one.
-            return new Second<>(firstAsOptional());
+            return new Right<>(leftAsOptional());
         }
 
         @Override
         public <TOF, TOS> Either<TOF, TOS> map(
-                final Function<? super FIRST, ? extends TOF> firstFunc,
-                final Function<? super SECOND, ? extends TOS> secondFunc) {
-            final TOF result = firstFunc.apply(first());
-            return first(result);
+                final Function<? super LEFT, ? extends TOF> leftFunc,
+                final Function<? super RIGHT, ? extends TOS> rightFunc) {
+            final TOF result = leftFunc.apply(left());
+            return left(result);
         }
 
         @Override
-        public <T> Optional<T> mapFirst(final Function<? super FIRST, ? extends T> func) {
-            final T result = func.apply(first());
+        public <T> Optional<T> mapLeft(final Function<? super LEFT, ? extends T> func) {
+            final T result = func.apply(left());
             return Optional.of(result);
         }
     }
 
 
-    private static final class Second<FIRST, SECOND> extends Either<FIRST, SECOND> {
-        public Second(final Optional<SECOND> value) {
+    private static final class Right<LEFT, RIGHT> extends Either<LEFT, RIGHT> {
+        public Right(final Optional<RIGHT> value) {
             super(value);
         }
 
         @SuppressWarnings("unchecked")
         @Override
-        public Optional<SECOND> secondAsOptional() {
-            return (Optional<SECOND>) get();
+        public Optional<RIGHT> rightAsOptional() {
+            return (Optional<RIGHT>) get();
         }
 
         @Override
-        public Either<SECOND, FIRST> swap() {
+        public Either<RIGHT, LEFT> swap() {
             // Eithers are immutable! No choice but to allocate a new one.
-            return new First<>(secondAsOptional());
+            return new Left<>(rightAsOptional());
         }
 
         @Override
         public <TOF, TOS> Either<TOF, TOS> map(
-                final Function<? super FIRST, ? extends TOF> firstFunc,
-                final Function<? super SECOND, ? extends TOS> secondFunc) {
-            final TOS result = secondFunc.apply(second());
-            return second(result);
+                final Function<? super LEFT, ? extends TOF> leftFunc,
+                final Function<? super RIGHT, ? extends TOS> rightFunc) {
+            final TOS result = rightFunc.apply(right());
+            return right(result);
         }
 
         @Override
-        public <T> Optional<T> mapSecond(final Function<? super SECOND, ? extends T> func) {
-            final T result = func.apply(second());
+        public <T> Optional<T> mapRight(final Function<? super RIGHT, ? extends T> func) {
+            final T result = func.apply(right());
             return Optional.of(result);
         }
     }
