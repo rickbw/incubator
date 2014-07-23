@@ -215,6 +215,20 @@ public abstract class Either<LEFT, RIGHT> {
     /**
      * If the "left" element of this Either is present, apply the first of
      * the given {@link Function}s to it. Otherwise, if the "right" element is
+     * present, apply the second of the given Functions to it. In either case,
+     * the result will be of type <code>TO</code>; return it.
+     */
+    public final <TO> TO fold(
+            final Function<? super LEFT, ? extends TO> leftFunc,
+            final Function<? super RIGHT, ? extends TO> rightFunc) {
+        @SuppressWarnings("unchecked")
+        final TO result = (TO) transform(leftFunc, rightFunc).get();
+        return result;
+    }
+
+    /**
+     * If the "left" element of this Either is present, apply the first of
+     * the given {@link Function}s to it. Otherwise, if the "right" element is
      * present, apply the second of the given Functions to it.
      *
      * @return  an Either that encapsulates the result of the only Function
