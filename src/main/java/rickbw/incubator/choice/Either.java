@@ -60,7 +60,7 @@ public abstract class Either<LEFT, RIGHT> {
      * Return an Either for which {@link #left()} will return the given
      * object and {@link #right()} will throw {@link IllegalStateException}.
      */
-    public static <F, S> Either<F, S> left(final F value) {
+    public static <L, R> Either<L, R> left(final L value) {
         return new Left<>(Optional.of(value));
     }
 
@@ -68,7 +68,7 @@ public abstract class Either<LEFT, RIGHT> {
      * Return an Either for which {@link #right()} will return the given
      * object and {@link #left()} will throw {@link IllegalStateException}.
      */
-    public static <F, S> Either<F, S> right(final S value) {
+    public static <L, R> Either<L, R> right(final R value) {
         return new Right<>(Optional.of(value));
     }
 
@@ -76,9 +76,9 @@ public abstract class Either<LEFT, RIGHT> {
      * @return  Either the "left" argument, if it is present, or the result
      *          supplied by the "right".
      */
-    public static <F, S> Either<F, S> leftOrRight(
-            final Optional<F> left,
-            final Supplier<S> right) {
+    public static <L, R> Either<L, R> leftOrRight(
+            final Optional<L> left,
+            final Supplier<R> right) {
         if (left.isPresent()) {
             return new Left<>(left);
         } else {
@@ -93,7 +93,7 @@ public abstract class Either<LEFT, RIGHT> {
      *
      * @return  Either the given value, if it is present, or {@link Nothing}.
      */
-    public static <F> Either<F, Nothing> presentOrNothing(final Optional<F> value) {
+    public static <L> Either<L, Nothing> presentOrNothing(final Optional<L> value) {
         if (value.isPresent()) {
             return new Left<>(value);
         } else {
@@ -216,9 +216,9 @@ public abstract class Either<LEFT, RIGHT> {
      * @return  an Either that encapsulates the result of the only Function
      *          that was run.
      */
-    public abstract <TOF, TOS> Either<TOF, TOS> map(
-            final Function<? super LEFT, ? extends TOF> leftFunc,
-            final Function<? super RIGHT, ? extends TOS> rightFunc);
+    public abstract <TOL, TOR> Either<TOL, TOR> map(
+            final Function<? super LEFT, ? extends TOL> leftFunc,
+            final Function<? super RIGHT, ? extends TOR> rightFunc);
 
     /**
      * Return the result of applying the given function to the "left" element,
@@ -311,10 +311,10 @@ public abstract class Either<LEFT, RIGHT> {
         }
 
         @Override
-        public <TOF, TOS> Either<TOF, TOS> map(
-                final Function<? super LEFT, ? extends TOF> leftFunc,
-                final Function<? super RIGHT, ? extends TOS> rightFunc) {
-            final TOF result = leftFunc.apply(left());
+        public <TOL, TOR> Either<TOL, TOR> map(
+                final Function<? super LEFT, ? extends TOL> leftFunc,
+                final Function<? super RIGHT, ? extends TOR> rightFunc) {
+            final TOL result = leftFunc.apply(left());
             return left(result);
         }
 
@@ -344,10 +344,10 @@ public abstract class Either<LEFT, RIGHT> {
         }
 
         @Override
-        public <TOF, TOS> Either<TOF, TOS> map(
-                final Function<? super LEFT, ? extends TOF> leftFunc,
-                final Function<? super RIGHT, ? extends TOS> rightFunc) {
-            final TOS result = rightFunc.apply(right());
+        public <TOL, TOR> Either<TOL, TOR> map(
+                final Function<? super LEFT, ? extends TOL> leftFunc,
+                final Function<? super RIGHT, ? extends TOR> rightFunc) {
+            final TOR result = rightFunc.apply(right());
             return right(result);
         }
 
