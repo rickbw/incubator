@@ -277,14 +277,16 @@ public abstract class Either<LEFT, RIGHT> {
         }
 
         final Either<?, ?> other = (Either<?, ?>) obj;
-        if (isLeftPresent() != other.isLeftPresent()) {
-            /* Allows us to short-circuit calling equals() on the "right"
-             * element. Assuming comparing booleans is cheaper than calling
-             * equals() on some arbitrary object, this way should be faster.
-             */
+        /* One of these comparisons will be against Optional.absent(), and
+         * will thus be very fast:
+         */
+        if (!leftAsOptional().equals(other.leftAsOptional())) {
             return false;
         }
-        return leftAsOptional().equals(other.leftAsOptional());
+        if (!rightAsOptional().equals(other.rightAsOptional())) {
+            return false;
+        }
+        return true;
     }
 
     private Either(final Optional<?> value) {
