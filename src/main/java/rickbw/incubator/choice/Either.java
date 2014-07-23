@@ -73,16 +73,16 @@ public abstract class Either<LEFT, RIGHT> {
     }
 
     /**
-     * @return  Either the "left" argument, if it is present, or the result
-     *          supplied by the "right".
+     * @return  Either the "right" argument, if it is present, or the result
+     *          supplied by the "left".
      */
-    public static <L, R> Either<L, R> leftOrRight(
-            final Optional<L> left,
-            final Supplier<R> right) {
-        if (left.isPresent()) {
-            return new Left<>(left);
+    public static <L, R> Either<L, R> rightOrLeft(
+            final Supplier<L> left,
+            final Optional<R> right) {
+        if (right.isPresent()) {
+            return new Right<>(right);
         } else {
-            return right(right.get());
+            return left(left.get());
         }
     }
 
@@ -93,11 +93,11 @@ public abstract class Either<LEFT, RIGHT> {
      *
      * @return  Either the given value, if it is present, or {@link Nothing}.
      */
-    public static <L> Either<L, Nothing> presentOrNothing(final Optional<L> value) {
+    public static <R> Either<Nothing, R> presentOrNothing(final Optional<R> value) {
         if (value.isPresent()) {
-            return new Left<>(value);
+            return new Right<>(value);
         } else {
-            return right(nothing);
+            return left(nothing);
         }
     }
 
@@ -105,14 +105,16 @@ public abstract class Either<LEFT, RIGHT> {
      * Invoke {@link Callable#call()}, and return Either the result or the
      * exception that was thrown.
      *
+     * @throws Error    If the given {@link Callable} throws it.
+     *
      * @see #supply(Supplier)
      */
-    public static <T> Either<T, Exception> call(final Callable<T> callable) {
+    public static <R> Either<Exception, R> call(final Callable<R> callable) {
         try {
-            final T result = callable.call();
-            return left(result);
+            final R result = callable.call();
+            return right(result);
         } catch (final Exception ex) {
-            return right(ex);
+            return left(ex);
         }
     }
 
@@ -120,14 +122,16 @@ public abstract class Either<LEFT, RIGHT> {
      * Invoke {@link Supplier#get()}, and return Either the result or the
      * exception that was thrown.
      *
+     * @throws Error    If the given {@link Callable} throws it.
+     *
      * @see #call(Callable)
      */
-    public static <T> Either<T, RuntimeException> supply(final Supplier<T> supplier) {
+    public static <R> Either<RuntimeException, R> supply(final Supplier<R> supplier) {
         try {
-            final T result = supplier.get();
-            return left(result);
+            final R result = supplier.get();
+            return right(result);
         } catch (final RuntimeException ex) {
-            return right(ex);
+            return left(ex);
         }
     }
 
