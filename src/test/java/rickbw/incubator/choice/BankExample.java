@@ -28,23 +28,23 @@ public final class BankExample {
      *         successful, or {@link InsufficientFunds} if the account would
      *         be overdrawn.
      */
-    public Either<Integer, InsufficientFunds> withdraw(final int amountCents) {
+    public Either<InsufficientFunds, Integer> withdraw(final int amountCents) {
         if (amountCents <= this.accountBalanceCents) {
             this.accountBalanceCents -= amountCents;
-            return Either.first(this.accountBalanceCents);
+            return Either.ofRight(this.accountBalanceCents);
         } else {
-            return Either.second(new InsufficientFunds(this.accountBalanceCents, amountCents));
+            return Either.ofLeft(new InsufficientFunds(this.accountBalanceCents, amountCents));
         }
     }
 
     public static void main(final String[] args) {
         final BankExample bankAccount = new BankExample();
 
-        final Either<Integer, InsufficientFunds> result = bankAccount.withdraw(2000);
-        if (result.isFirstPresent()) {
-            System.out.println("I have " + result.first() + " cents left");
+        final Either<InsufficientFunds, Integer> result = bankAccount.withdraw(2000);
+        if (result.right().isPresent()) {
+            System.out.println("I have " + result.left() + " cents left");
         } else {
-            System.err.println("Can't withdraw " + result.second().withdrawAttemptCents);
+            System.err.println("Can't withdraw " + result.left().get().withdrawAttemptCents);
         }
     }
 

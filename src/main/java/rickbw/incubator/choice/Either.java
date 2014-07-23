@@ -46,7 +46,7 @@ public abstract class Either<LEFT, RIGHT> {
      * {@link Optional#isPresent()}).
      *
      * <b>Design rationale</b>: Why wrap it in an Optional? We want to be able
-     * to provide it as an Optional (see e.g. {@link #optionalOfLeft()}), so
+     * to provide it as an Optional (see e.g. {@link #left()}), so
      * we have the choice to either store it bare and wrap it in that call, or
      * to store it wrapped and unwrap it in e.g. {@link #get()}. Wrapping
      * requires the allocation of a new heap object and subsequent garbage-
@@ -61,7 +61,7 @@ public abstract class Either<LEFT, RIGHT> {
      * Return an Either for which {@link #left()} will return the given
      * object and {@link #right()} will throw {@link IllegalStateException}.
      */
-    public static <L, R> Either<L, R> left(final L value) {
+    public static <L, R> Either<L, R> ofLeft(final L value) {
         return new Left<>(Optional.of(value));
     }
 
@@ -69,7 +69,7 @@ public abstract class Either<LEFT, RIGHT> {
      * Return an Either for which {@link #right()} will return the given
      * object and {@link #left()} will throw {@link IllegalStateException}.
      */
-    public static <L, R> Either<L, R> right(final R value) {
+    public static <L, R> Either<L, R> ofRight(final R value) {
         return new Right<>(Optional.of(value));
     }
 
@@ -83,7 +83,7 @@ public abstract class Either<LEFT, RIGHT> {
         if (right.isPresent()) {
             return new Right<>(right);
         } else {
-            return left(left.get());
+            return ofLeft(left.get());
         }
     }
 
@@ -98,7 +98,7 @@ public abstract class Either<LEFT, RIGHT> {
         if (value.isPresent()) {
             return new Right<>(value);
         } else {
-            return left(nothing);
+            return ofLeft(nothing);
         }
     }
 
@@ -113,9 +113,9 @@ public abstract class Either<LEFT, RIGHT> {
     public static <R> Either<Exception, R> call(final Callable<R> callable) {
         try {
             final R result = callable.call();
-            return right(result);
+            return ofRight(result);
         } catch (final Exception ex) {
-            return left(ex);
+            return ofLeft(ex);
         }
     }
 
@@ -130,78 +130,38 @@ public abstract class Either<LEFT, RIGHT> {
     public static <R> Either<RuntimeException, R> supply(final Supplier<R> supplier) {
         try {
             final R result = supplier.get();
-            return right(result);
+            return ofRight(result);
         } catch (final RuntimeException ex) {
-            return left(ex);
+            return ofLeft(ex);
         }
     }
 
     /**
-     * If {@link #isLeftPresent()}, return the result of {@link #left()},
-     * wrapped in an {@link Optional}. Otherwise, return
-     * {@link Optional#absent()}.
+     * @return  Return the "left" side of this Either, if it is present, or
+     *          otherwise {@link Optional#absent()}.
      */
-    public Optional<LEFT> optionalOfLeft() {
+    public Optional<LEFT> left() {
         // Subclass Left overrides this implementation
         return Optional.absent();
     }
 
     /**
-     * If {@link #isRightPresent()}, return the result of {@link #right()},
-     * wrapped in an {@link Optional}. Otherwise, return
-     * {@link Optional#absent()}.
+     * @return  Return the "right" side of this Either, if it is present, or
+     *          otherwise {@link Optional#absent()}.
      */
-    public Optional<RIGHT> optionalOfRight() {
+    public Optional<RIGHT> right() {
         // Subclass Right overrides this implementation
         return Optional.absent();
     }
 
     /**
-     * Return true if the "left" element of this Either is the one that is
-     * present. This result is equivalent to {@link #optionalOfLeft()}
-     * followed by {@link Optional#isPresent()}.
-     */
-    public final boolean isLeftPresent() {
-        return optionalOfLeft().isPresent();
-    }
-
-    /**
-     * Return true if the "right" element of this Either is the one that is
-     * present. This result is equivalent to {@link #optionalOfRight()}
-     * followed by {@link Optional#isPresent()}.
-     */
-    public final boolean isRightPresent() {
-        return optionalOfRight().isPresent();
-    }
-
-    /**
-     * Return the "left" element of this Either, assuming it is present.
-     *
-     * @throws  IllegalStateException   If the left element is not present
-     *                                  (and the right is).
-     *
-     * @see #isLeftPresent()
-     */
-    public final LEFT left() {
-        return optionalOfLeft().get();
-    }
-
-    /**
-     * Return the "right" element of this Either, assuming it is present.
-     *
-     * @throws  IllegalStateException   If the right element is not present
-     *                                  (and the left one is).
-     *
-     * @see #isRightPresent()
-     */
-    public final RIGHT right() {
-        return optionalOfRight().get();
-    }
-
-    /**
-     * Get the "left" element of this Either if {@link #isLeftPresent()} or
-     * the "right" element if {@link #isRightPresent()}. In this case, the
+     * Get the "left" element of this Either if {@code left().isPresent()} or
+     * the "right" element if {@code right().isPresent()}. In this case, the
      * application must take responsibility for type checking.
+     *
+     * @see #left()
+     * @see #right()
+     * @see Optional#isPresent()
      */
     public final Object get() {
         return this.value.get();
@@ -265,13 +225,16 @@ public abstract class Either<LEFT, RIGHT> {
     @Override
     public final String toString() {
         final StringBuilder buf = new StringBuilder(getClass().getSimpleName());
-        buf.append('[');
-        if (isLeftPresent()) {
-            buf.append("left=").append(left());
+        buf.append('(');
+        final Optional<LEFT> left = left();
+        if (left.isPresent()) {
+            buf.append("left=").append(left.get());
         } else {
-            buf.append("right=").append(right());
+            final Optional<RIGHT> right = right();
+            assert right.isPresent();
+            buf.append("right=").append(right.get());
         }
-        buf.append(']');
+        buf.append(')');
         return buf.toString();
     }
 
@@ -279,8 +242,8 @@ public abstract class Either<LEFT, RIGHT> {
     public final int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result + optionalOfLeft().hashCode();
-        result = prime * result + optionalOfRight().hashCode();
+        result = prime * result + left().hashCode();
+        result = prime * result + right().hashCode();
         return result;
     }
 
@@ -300,10 +263,10 @@ public abstract class Either<LEFT, RIGHT> {
         /* One of these comparisons will be against Optional.absent(), and
          * will thus be very fast:
          */
-        if (!optionalOfLeft().equals(other.optionalOfLeft())) {
+        if (!left().equals(other.left())) {
             return false;
         }
-        if (!optionalOfRight().equals(other.optionalOfRight())) {
+        if (!right().equals(other.right())) {
             return false;
         }
         return true;
@@ -322,22 +285,22 @@ public abstract class Either<LEFT, RIGHT> {
 
         @SuppressWarnings("unchecked")
         @Override
-        public Optional<LEFT> optionalOfLeft() {
+        public Optional<LEFT> left() {
             return (Optional<LEFT>) get();
         }
 
         @Override
         public Either<RIGHT, LEFT> swap() {
             // Eithers are immutable! No choice but to allocate a new one.
-            return new Right<>(optionalOfLeft());
+            return new Right<>(left());
         }
 
         @Override
         public <TOL, TOR> Either<TOL, TOR> transform(
                 final Function<? super LEFT, ? extends TOL> leftFunc,
                 final Function<? super RIGHT, ? extends TOR> rightFunc) {
-            final TOL result = leftFunc.apply(left());
-            return left(result);
+            final TOL result = leftFunc.apply(left().get());
+            return ofLeft(result);
         }
     }
 
@@ -349,22 +312,22 @@ public abstract class Either<LEFT, RIGHT> {
 
         @SuppressWarnings("unchecked")
         @Override
-        public Optional<RIGHT> optionalOfRight() {
+        public Optional<RIGHT> right() {
             return (Optional<RIGHT>) get();
         }
 
         @Override
         public Either<RIGHT, LEFT> swap() {
             // Eithers are immutable! No choice but to allocate a new one.
-            return new Left<>(optionalOfRight());
+            return new Left<>(right());
         }
 
         @Override
         public <TOL, TOR> Either<TOL, TOR> transform(
                 final Function<? super LEFT, ? extends TOL> leftFunc,
                 final Function<? super RIGHT, ? extends TOR> rightFunc) {
-            final TOR result = rightFunc.apply(right());
-            return right(result);
+            final TOR result = rightFunc.apply(right().get());
+            return ofRight(result);
         }
     }
 
