@@ -19,6 +19,7 @@ import static rickbw.incubator.choice.Nothing.nothing;
 import java.util.concurrent.Callable;
 
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 
@@ -242,28 +243,23 @@ public abstract class Either<LEFT, RIGHT> {
 
     /**
      * Return the result of applying the given function to the "left" element,
-     * if it is present. Otherwise, return {@link Optional#absent()}.
-     *
-     * @param func  Applied to the "left" element, if it is present.
+     * if it is present. Otherwise, retain the existing value on the right.
      *
      * @see Optional#transform(Function)
      */
-    public <T> Optional<T> transformLeft(final Function<? super LEFT, ? extends T> func) {
-        // Subclass Left overrides this implementation
-        return Optional.absent();
+    public final <TO> Either<TO, RIGHT> transformLeft(final Function<? super LEFT, ? extends TO> func) {
+        return transform(func, Functions.<RIGHT>identity());
     }
 
     /**
      * Return the result of applying the given function to the "right"
-     * element, if it is present. Otherwise, return {@link Optional#absent()}.
-     *
-     * @param func  Applied to the "right" element, if it is present.
+     * element, if it is present. Otherwise, retain the existing value on the
+     * left.
      *
      * @see Optional#transform(Function)
      */
-    public <T> Optional<T> transformRight(final Function<? super RIGHT, ? extends T> func) {
-        // Subclass Right overrides this implementation
-        return Optional.absent();
+    public final <TO> Either<LEFT, TO> transformRight(final Function<? super RIGHT, ? extends TO> func) {
+        return transform(Functions.<LEFT>identity(), func);
     }
 
     @Override
@@ -343,12 +339,6 @@ public abstract class Either<LEFT, RIGHT> {
             final TOL result = leftFunc.apply(left());
             return left(result);
         }
-
-        @Override
-        public <T> Optional<T> transformLeft(final Function<? super LEFT, ? extends T> func) {
-            final T result = func.apply(left());
-            return Optional.of(result);
-        }
     }
 
 
@@ -375,12 +365,6 @@ public abstract class Either<LEFT, RIGHT> {
                 final Function<? super RIGHT, ? extends TOR> rightFunc) {
             final TOR result = rightFunc.apply(right());
             return right(result);
-        }
-
-        @Override
-        public <T> Optional<T> transformRight(final Function<? super RIGHT, ? extends T> func) {
-            final T result = func.apply(right());
-            return Optional.of(result);
         }
     }
 
