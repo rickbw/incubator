@@ -45,7 +45,7 @@ public abstract class Either<LEFT, RIGHT> {
      * {@link Optional#isPresent()}).
      *
      * <b>Design rationale</b>: Why wrap it in an Optional? We want to be able
-     * to provide it as an Optional (see e.g. {@link #leftAsOptional()}), so
+     * to provide it as an Optional (see e.g. {@link #optionalOfLeft()}), so
      * we have the choice to either store it bare and wrap it in that call, or
      * to store it wrapped and unwrap it in e.g. {@link #get()}. Wrapping
      * requires the allocation of a new heap object and subsequent garbage-
@@ -140,7 +140,7 @@ public abstract class Either<LEFT, RIGHT> {
      * wrapped in an {@link Optional}. Otherwise, return
      * {@link Optional#absent()}.
      */
-    public Optional<LEFT> leftAsOptional() {
+    public Optional<LEFT> optionalOfLeft() {
         // Subclass Left overrides this implementation
         return Optional.absent();
     }
@@ -150,27 +150,27 @@ public abstract class Either<LEFT, RIGHT> {
      * wrapped in an {@link Optional}. Otherwise, return
      * {@link Optional#absent()}.
      */
-    public Optional<RIGHT> rightAsOptional() {
+    public Optional<RIGHT> optionalOfRight() {
         // Subclass Right overrides this implementation
         return Optional.absent();
     }
 
     /**
      * Return true if the "left" element of this Either is the one that is
-     * present. This result is equivalent to {@link #leftAsOptional()}
+     * present. This result is equivalent to {@link #optionalOfLeft()}
      * followed by {@link Optional#isPresent()}.
      */
     public final boolean isLeftPresent() {
-        return leftAsOptional().isPresent();
+        return optionalOfLeft().isPresent();
     }
 
     /**
      * Return true if the "right" element of this Either is the one that is
-     * present. This result is equivalent to {@link #rightAsOptional()}
+     * present. This result is equivalent to {@link #optionalOfRight()}
      * followed by {@link Optional#isPresent()}.
      */
     public final boolean isRightPresent() {
-        return rightAsOptional().isPresent();
+        return optionalOfRight().isPresent();
     }
 
     /**
@@ -182,7 +182,7 @@ public abstract class Either<LEFT, RIGHT> {
      * @see #isLeftPresent()
      */
     public final LEFT left() {
-        return leftAsOptional().get();
+        return optionalOfLeft().get();
     }
 
     /**
@@ -194,7 +194,7 @@ public abstract class Either<LEFT, RIGHT> {
      * @see #isRightPresent()
      */
     public final RIGHT right() {
-        return rightAsOptional().get();
+        return optionalOfRight().get();
     }
 
     /**
@@ -219,8 +219,10 @@ public abstract class Either<LEFT, RIGHT> {
      *
      * @return  an Either that encapsulates the result of the only Function
      *          that was run.
+     *
+     * @see Optional#transform(Function)
      */
-    public abstract <TOL, TOR> Either<TOL, TOR> map(
+    public abstract <TOL, TOR> Either<TOL, TOR> transform(
             final Function<? super LEFT, ? extends TOL> leftFunc,
             final Function<? super RIGHT, ? extends TOR> rightFunc);
 
@@ -229,8 +231,10 @@ public abstract class Either<LEFT, RIGHT> {
      * if it is present. Otherwise, return {@link Optional#absent()}.
      *
      * @param func  Applied to the "left" element, if it is present.
+     *
+     * @see Optional#transform(Function)
      */
-    public <T> Optional<T> mapLeft(final Function<? super LEFT, ? extends T> func) {
+    public <T> Optional<T> transformLeft(final Function<? super LEFT, ? extends T> func) {
         // Subclass Left overrides this implementation
         return Optional.absent();
     }
@@ -240,8 +244,10 @@ public abstract class Either<LEFT, RIGHT> {
      * element, if it is present. Otherwise, return {@link Optional#absent()}.
      *
      * @param func  Applied to the "right" element, if it is present.
+     *
+     * @see Optional#transform(Function)
      */
-    public <T> Optional<T> mapRight(final Function<? super RIGHT, ? extends T> func) {
+    public <T> Optional<T> transformRight(final Function<? super RIGHT, ? extends T> func) {
         // Subclass Right overrides this implementation
         return Optional.absent();
     }
@@ -263,8 +269,8 @@ public abstract class Either<LEFT, RIGHT> {
     public final int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result + leftAsOptional().hashCode();
-        result = prime * result + rightAsOptional().hashCode();
+        result = prime * result + optionalOfLeft().hashCode();
+        result = prime * result + optionalOfRight().hashCode();
         return result;
     }
 
@@ -284,10 +290,10 @@ public abstract class Either<LEFT, RIGHT> {
         /* One of these comparisons will be against Optional.absent(), and
          * will thus be very fast:
          */
-        if (!leftAsOptional().equals(other.leftAsOptional())) {
+        if (!optionalOfLeft().equals(other.optionalOfLeft())) {
             return false;
         }
-        if (!rightAsOptional().equals(other.rightAsOptional())) {
+        if (!optionalOfRight().equals(other.optionalOfRight())) {
             return false;
         }
         return true;
@@ -306,18 +312,18 @@ public abstract class Either<LEFT, RIGHT> {
 
         @SuppressWarnings("unchecked")
         @Override
-        public Optional<LEFT> leftAsOptional() {
+        public Optional<LEFT> optionalOfLeft() {
             return (Optional<LEFT>) get();
         }
 
         @Override
         public Either<RIGHT, LEFT> swap() {
             // Eithers are immutable! No choice but to allocate a new one.
-            return new Right<>(leftAsOptional());
+            return new Right<>(optionalOfLeft());
         }
 
         @Override
-        public <TOL, TOR> Either<TOL, TOR> map(
+        public <TOL, TOR> Either<TOL, TOR> transform(
                 final Function<? super LEFT, ? extends TOL> leftFunc,
                 final Function<? super RIGHT, ? extends TOR> rightFunc) {
             final TOL result = leftFunc.apply(left());
@@ -325,7 +331,7 @@ public abstract class Either<LEFT, RIGHT> {
         }
 
         @Override
-        public <T> Optional<T> mapLeft(final Function<? super LEFT, ? extends T> func) {
+        public <T> Optional<T> transformLeft(final Function<? super LEFT, ? extends T> func) {
             final T result = func.apply(left());
             return Optional.of(result);
         }
@@ -339,18 +345,18 @@ public abstract class Either<LEFT, RIGHT> {
 
         @SuppressWarnings("unchecked")
         @Override
-        public Optional<RIGHT> rightAsOptional() {
+        public Optional<RIGHT> optionalOfRight() {
             return (Optional<RIGHT>) get();
         }
 
         @Override
         public Either<RIGHT, LEFT> swap() {
             // Eithers are immutable! No choice but to allocate a new one.
-            return new Left<>(rightAsOptional());
+            return new Left<>(optionalOfRight());
         }
 
         @Override
-        public <TOL, TOR> Either<TOL, TOR> map(
+        public <TOL, TOR> Either<TOL, TOR> transform(
                 final Function<? super LEFT, ? extends TOL> leftFunc,
                 final Function<? super RIGHT, ? extends TOR> rightFunc) {
             final TOR result = rightFunc.apply(right());
@@ -358,7 +364,7 @@ public abstract class Either<LEFT, RIGHT> {
         }
 
         @Override
-        public <T> Optional<T> mapRight(final Function<? super RIGHT, ? extends T> func) {
+        public <T> Optional<T> transformRight(final Function<? super RIGHT, ? extends T> func) {
             final T result = func.apply(right());
             return Optional.of(result);
         }
