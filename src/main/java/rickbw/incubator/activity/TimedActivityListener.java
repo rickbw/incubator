@@ -17,13 +17,17 @@ package rickbw.incubator.activity;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.base.Stopwatch;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Meter;
 import com.yammer.metrics.core.MetricName;
 import com.yammer.metrics.core.Timer;
 
+import rickbw.incubator.activity.TimedActivityListener.TimedActivity;
+import rickbw.incubator.activity.TimedActivityListener.TimedExecution;
 
-public class TimedActivityListener implements ActivityListener {
+
+public final class TimedActivityListener implements ActivityListener<TimedActivity, TimedExecution> {
 
     private final TimeUnit durationUnit;
     private final TimeUnit rateUnit;
@@ -39,31 +43,31 @@ public class TimedActivityListener implements ActivityListener {
     }
 
     @Override
-    public Object onStarted(final Activity activity) {
+    public TimedActivity onActivityInitialized(final Activity activity) {
         return new TimedActivity(activity.getId());
     }
 
     @Override
-    public void onFailure(final Activity activity, final Throwable failure, final Object context) {
-        final TimedActivity timed = (TimedActivity) context;
+    public TimedExecution onExecutionStarted(final TimedActivity timed) {
+        return new TimedExecution(timed);
+    }
+
+    @Override
+    public void onExecutionFailure(final TimedExecution timed, final Throwable failure) {
         timed.failureOccurred();
     }
 
     @Override
-    public void onCompleted(final Activity activity, final Object context) {
-        final TimedActivity timed = (TimedActivity) context;
+    public void onExecutionCompleted(final TimedExecution timed) {
         timed.completed();
     }
 
 
-    private final class TimedActivity {
-        private final long startTimeNanos;
+    public final class TimedActivity {
         private final Timer timer;
         private final Meter failureMeter;
 
-        public TimedActivity(final ActivityId id) {
-            // FIXME: We shouldn't have to do all this every time the activity runs
-
+        private TimedActivity(final ActivityId id) {
             final String timerActivityName = id.getActivityName() + "-times";
             final MetricName timerName = new MetricName(id.getGroupName(), id.getTypeName(), timerActivityName);
             this.timer = Metrics.newTimer(timerName, durationUnit, rateUnit);
@@ -71,17 +75,24 @@ public class TimedActivityListener implements ActivityListener {
             final String failureMeterActivityName = id.getActivityName() + "-failures";
             final MetricName failureMeterName = new MetricName(id.getGroupName(), id.getTypeName(), failureMeterActivityName);
             this.failureMeter = Metrics.newMeter(failureMeterName, "failures", rateUnit);
+        }
+    }
 
-            this.startTimeNanos = System.nanoTime();
+    public final class TimedExecution {
+        private final TimedActivity timed;
+        private final Stopwatch stopwatch = Stopwatch.createStarted();
+
+        private TimedExecution(final TimedActivity timed) {
+            this.timed = timed;
         }
 
-        public void failureOccurred() {
-            this.failureMeter.mark();
+        private void failureOccurred() {
+            this.timed.failureMeter.mark();
         }
 
-        public void completed() {
-            final long elapsed = System.nanoTime() - this.startTimeNanos;
-            this.timer.update(elapsed, TimeUnit.NANOSECONDS);
+        private void completed() {
+            final long elapsed = this.stopwatch.stop().elapsed(TimeUnit.NANOSECONDS);
+            this.timed.timer.update(elapsed, TimeUnit.NANOSECONDS);
         }
     }
 

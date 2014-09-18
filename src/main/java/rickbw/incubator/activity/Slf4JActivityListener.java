@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
  * An {@link ActivityListener} that logs all of its callbacks using the
  * SLF4J API.
  */
-public final class Slf4JActivityListener implements ActivityListener {
+public final class Slf4JActivityListener implements ActivityListener<Logger, Logger> {
 
     public static final LogLevel DEFAULT_START_COMPLETE_LEVEL = LogLevel.INFO;
     public static final LogLevel DEFAULT_FAIL_LEVEL = LogLevel.ERROR;
@@ -45,21 +45,25 @@ public final class Slf4JActivityListener implements ActivityListener {
     }
 
     @Override
-    public Object onStarted(final Activity activity) {
-        final Logger logger = getLogger(activity.getId());
+    public Logger onActivityInitialized(final Activity activity) {
+        final ActivityId id = activity.getId();
+        final String loggerName = id.getGroupName() + '.' + id.getTypeName();
+        return LoggerFactory.getLogger(loggerName);
+    }
+
+    @Override
+    public Logger onExecutionStarted(final Logger logger) {
         log(logger, this.startCompleteLevel, "Activity {} started");
         return logger;
     }
 
     @Override
-    public void onFailure(final Activity activity, final Throwable failure, final Object context) {
-        final Logger logger = (Logger) context;
+    public void onExecutionFailure(final Logger logger, final Throwable failure) {
         log(logger, this.failLevel, "Failure in activity {}", failure);
     }
 
     @Override
-    public void onCompleted(final Activity activity, final Object context) {
-        final Logger logger = (Logger) context;
+    public void onExecutionCompleted(final Logger logger) {
         log(logger, this.startCompleteLevel, "Activity {} completed");
     }
 
@@ -93,12 +97,6 @@ public final class Slf4JActivityListener implements ActivityListener {
                     throw new AssertionError(level);
             }
         }
-    }
-
-    private static Logger getLogger(final ActivityId id) {
-        // FIXME: We shouldn't have to do this every time the activity runs
-        final String loggerName = id.getGroupName() + '.' + id.getTypeName();
-        return LoggerFactory.getLogger(loggerName);
     }
 
 

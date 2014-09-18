@@ -30,35 +30,45 @@ package rickbw.incubator.activity;
  * for ensuring that a given listener won't be called concurrently for the
  * same activity.
  */
-public interface ActivityListener {
+public interface ActivityListener<AC, EC> {
 
     /**
-     * The given {@link Activity} has started. This method must be the first
-     * called on any listener, and must only be called once.
-     *
-     * @return  an Activity-specific "context" object, which will be passed
-     *          back to this listener in future calls pertaining to the same
-     *          Activity. Use this object in preference to maintaining such
-     *          state internally to the listener. It can be null.
+     * The given {@link Activity} has been initialized. If this listener
+     * requires any expensive per-Activity initialization, it should do so
+     * here, and return it. The result will be passed back to the other
+     * methods.
      */
-    Object onStarted(Activity activity);
+    AC onActivityInitialized(Activity activity);
+
+    /**
+     * A particular {@link Activity.Execution} has started. This method must
+     * be the first called for that execution, and must only be called once.
+     *
+     * @param activityContext   The object previously returned from a call
+     *                          to {@link #onActivityInitialized(Activity)}
+     *
+     * @return  Any per-Execution context that this listener may need. If no
+     *          per-Execution context is needed, simply return the argument.
+     */
+    EC onExecutionStarted(AC activityContext);
 
     /**
      * A full or partial failure occurred along the way. This method may be
      * called zero or more times at any point in between
-     * {@link #onStarted(Activity)} and {@link #onCompleted(Activity, Object)}.
+     * {@link #onExecutionStarted(Object)} and
+     * {@link #onExecutionCompleted(Object)}.
      *
      * Since this method will be called in the context of a previous failure,
      * implementations should take care not to raise exceptions of their own.
      */
-    void onFailure(Activity activity, Throwable failure, Object context);
+    void onExecutionFailure(EC activityContext, Throwable failure);
 
     /**
-     * The given {@link Activity} has completed. This method must be called
-     * after {@link #onStarted(Activity)} and after any calls to
-     * {@link #onFailure(Activity, Throwable, Object)}, and must be called
-     * only once.
+     * A particular {@link Activity.Execution} has completed. This method must
+     * be called after {@link #onExecutionStarted(Object)} and after any calls
+     * to {@link #onExecutionFailure(Object, Throwable)}, and must be called
+     * only once for any given Execution.
      */
-    void onCompleted(Activity activity, Object context);
+    void onExecutionCompleted(EC activityContext);
 
 }

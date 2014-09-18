@@ -15,9 +15,7 @@
 package rickbw.incubator.activity;
 
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
-
-import com.google.common.base.Preconditions;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
 /**
@@ -30,77 +28,120 @@ import com.google.common.base.Preconditions;
  * Activities may be nested; that is, one Activity may be made up (in whole or
  * in part) of other Activities.
  */
-public class Activity implements AutoCloseable {
+public abstract class Activity {
 
-    private final AtomicReference<State> state = new AtomicReference<>(State.UNSTARTED);
     private final ActivityId id;
-    private final ActivityListener listener;
-    private volatile Object context = null;
 
+
+    public static <AC, EC> Activity create(
+            final ActivityId id,
+            final ActivityListener<AC, EC> listener) {
+        return new ActivityImpl<>(id, listener);
+    }
 
     public ActivityId getId() {
         return this.id;
     }
 
     /**
-     * Start this activity and inform the listener.
+     * Start this activity and inform the listener. Do not attempt to  recover
+     * from any exception thrown by the latter.
      *
-     * @throw IllegalStateException If this Activity was already started previously.
-     *
-     * @see ActivityListener#onStarted(Activity)
+     * @see ActivityListener#onExecutionStarted(Object)
      */
-    /*package*/ void start() {
-        Preconditions.checkState(this.state.getAndSet(State.STARTED) == State.UNSTARTED);
-        synchronized (this.listener) {
-            this.context = this.listener.onStarted(this);
-        }
-    }
+    public abstract Execution start();
 
-    /**
-     * Inform the listener of the given failure. Do not attempt to recover
-     * from any exception it might throw.
-     *
-     * @see ActivityListener#onFailure(Activity, Throwable, Object)
-     */
-    public void failureOccurred(final Throwable failure) {
-        Preconditions.checkState(this.state.get() == State.STARTED);
-        synchronized (this.listener) {
-            this.listener.onFailure(this, failure, this.context);
-        }
-    }
-
-    /**
-     * Complete this Activity, and inform the listener. If the listener throws
-     * an exception, report it to
-     * {@link ActivityListener#onFailure(Activity, Throwable, Object)}. Do not
-     * attempt to recover from any exception thrown by the latter.
-     *
-     * @see ActivityListener#onCompleted(Activity, Object)
-     */
     @Override
-    public void close() {
-        Preconditions.checkState(this.state.getAndSet(State.COMPLETED) == State.STARTED);
-        synchronized (this.listener) {
-            try {
-                this.listener.onCompleted(this, this.context);
-            } catch (final Throwable failure) {
-                this.listener.onFailure(this, failure, this.context);
-            } finally {
-                this.context = null;
+    public String toString() {
+        return getClass().getSimpleName() + '(' + this.id + ')';
+    }
+
+    private Activity(final ActivityId id) {
+        this.id = Objects.requireNonNull(id);
+    }
+
+
+    public interface Execution extends AutoCloseable {
+        Activity getActivity();
+
+        /**
+         * Inform the listener of the given failure. Do not attempt to recover
+         * from any exception it might throw.
+         *
+         * @see ActivityListener#onExecutionFailure(Object, Throwable)
+         */
+        void failureOccurred(final Throwable failure);
+
+        /**
+         * Complete this Execution, and inform the listener. Do not attempt to
+         * recover from any exception thrown by the latter.
+         *
+         * @see ActivityListener#onExecutionCompleted(Object)
+         */
+        @Override
+        void close();
+    }
+
+
+    private static final class ActivityImpl<AC, EC> extends Activity {
+        private final ActivityListener<AC, EC> listener;
+        private final AC activityContext;
+
+        private ActivityImpl(final ActivityId id, final ActivityListener<AC, EC> listener) {
+            super(id);
+            this.listener = listener;
+            this.activityContext = this.listener.onActivityInitialized(this);
+        }
+
+        @Override
+        public Execution start() {
+            synchronized (this.listener) {
+                /* If onExecutionStarted() fails, we can't call onExecutionFailure(),
+                 * because we don't have the context.
+                 */
+                final EC context = this.listener.onExecutionStarted(this.activityContext);
+                return new ExecutionImpl<EC>(this, context);
             }
         }
     }
 
-    @Override
-    public String toString() {
-        return getClass().getSimpleName() + '(' + this.id + "; " + this.state + ')';
-    }
 
-    /*package*/ Activity(final ActivityId id, final ActivityListener listener) {
-        this.id = Objects.requireNonNull(id);
-        this.listener = Objects.requireNonNull(listener);
-    }
+    private static final class ExecutionImpl<EC> implements Execution {
+        private final AtomicBoolean closed = new AtomicBoolean(false);
+        private final ActivityImpl<?, EC> activity;
+        private final EC executionContext;
 
-    private enum State { UNSTARTED, STARTED, COMPLETED }
+        private ExecutionImpl(final ActivityImpl<?, EC> activity, final EC executionContext) {
+            this.activity = activity;
+            this.executionContext = executionContext;
+        }
+
+        @Override
+        public Activity getActivity() {
+            return this.activity;
+        }
+
+        @Override
+        public void failureOccurred(final Throwable failure) {
+            final ActivityListener<?, EC> listener = this.activity.listener;
+            synchronized (listener) {
+                listener.onExecutionFailure(this.executionContext, failure);
+            }
+        }
+
+        @Override
+        public void close() {
+            if (this.closed.getAndSet(true)) {
+                final ActivityListener<?, EC> listener = this.activity.listener;
+                synchronized (listener) {
+                    /* If onExecutionCompleted() fails, we can't call
+                     * onExecutionFailure(), because we have a guarantee not
+                     * to call the latter after the former.
+                     */
+                    listener.onExecutionCompleted(this.executionContext);
+                }
+            }
+        }
+    }
 
 }
