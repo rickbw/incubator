@@ -45,6 +45,22 @@ public final class CompositeActivityListener implements ActivityListener<List<Ob
     }
 
     /**
+     * Return a new CompositeActivityListener that combines the contents of
+     * this one with the given listener.
+     */
+    public CompositeActivityListener plus(final ActivityListener<?, ?> other) {
+        final ImmutableSet.Builder<ActivityListener<?, ?>> builder = ImmutableSet.builder();
+        builder.addAll(this.listeners);
+        if (other instanceof CompositeActivityListener) {
+            builder.addAll(((CompositeActivityListener) other).listeners);
+        } else {
+            builder.add(SynchronizedActivityListener.of(other));
+        }
+        final ImmutableSet<ActivityListener<?, ?>> newListeners = builder.build();
+        return new CompositeActivityListener(newListeners);
+    }
+
+    /**
      * Iterates over all member listeners in forward order.
      */
     @Override
