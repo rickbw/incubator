@@ -15,24 +15,33 @@
 package rickbw.incubator.activity;
 
 import java.util.Objects;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 
 /**
  * An Activity represents a series of actions carried out by an application.
- * These actions may be parallel or sequential, but as a group, they have a
- * beginning and an end.
+ * These actions may be done executed any number of times; each is represented
+ * by an {@link Execution}. An Execution may be parallel or sequential, but as
+ * a whole, it has a beginning and an end.
  *
- * An Activity reports those beginnings and endings to {@link ActivityListener}.
- *
- * Activities may be nested; that is, one Activity may be made up (in whole or
- * in part) of other Activities.
+ * An Activity, and all of its Executions, report what they do to an
+ * {@link ActivityListener}.
  */
-public abstract class Activity {
+public abstract class Activity implements Executor {
 
     private final ActivityId id;
 
 
+    /**
+     * Create a new Activity with the given ID that will report to the given
+     * listener.
+     *
+     * @throws  NullPointerException    If either argument is null.
+     *
+     * @see ActivityListener#onActivityInitialized(Activity)
+     */
     public static <AC, EC> Activity create(
             final ActivityId id,
             final ActivityListener<AC, EC> listener) {
@@ -44,12 +53,59 @@ public abstract class Activity {
     }
 
     /**
-     * Start this activity and inform the listener. Do not attempt to  recover
+     * Start this activity and inform the listener. Do not attempt to recover
      * from any exception thrown by the latter.
      *
      * @see ActivityListener#onExecutionStarted(Object)
      */
     public abstract Execution start();
+
+    /**
+     * Wrap the given {@link Runnable} in a new Runnable that starts a new
+     * {@link Execution} before running the given task, then closes that
+     * Execution afterwards.
+     */
+    public Runnable wrap(final Runnable task) {
+        return new Runnable() {
+            @Override
+            public void run() {
+                try (Execution exec = start()) {
+                    task.run();
+                }
+            }
+        };
+    }
+
+    /**
+     * Wrap the given {@link Callable} in a new Callable that starts a new
+     * {@link Execution} before running the given task, then closes that
+     * Execution afterwards.
+     */
+    public <T> Callable<T> wrap(final Callable<T> task) {
+        return new Callable<T>() {
+            @Override
+            public T call() throws Exception {
+                try (Execution exec = start()) {
+                    return task.call();
+                }
+            }
+        };
+    }
+
+    /**
+     * Run a given task in the current thread within a new {@link Execution}.
+     */
+    @Override
+    public void execute(final Runnable task) {
+        wrap(task).run();
+    }
+
+    /**
+     * Run a given task in the current thread within a new {@link Execution}.
+     */
+    public <T> T execute(final Callable<T> task) throws Exception {
+        return wrap(task).call();
+    }
 
     @Override
     public String toString() {
