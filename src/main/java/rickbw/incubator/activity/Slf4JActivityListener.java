@@ -19,12 +19,14 @@ import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import rickbw.incubator.activity.Slf4JActivityListener.ExecutionContext;
+
 
 /**
  * An {@link ActivityListener} that logs all of its callbacks using the
  * SLF4J API.
  */
-public final class Slf4JActivityListener implements ActivityListener<Logger, Logger> {
+public final class Slf4JActivityListener implements ActivityListener<Logger, ExecutionContext> {
 
     public static final LogLevel DEFAULT_START_COMPLETE_LEVEL = LogLevel.INFO;
     public static final LogLevel DEFAULT_FAIL_LEVEL = LogLevel.ERROR;
@@ -52,19 +54,20 @@ public final class Slf4JActivityListener implements ActivityListener<Logger, Log
     }
 
     @Override
-    public Logger onExecutionStarted(final Logger logger) {
-        log(logger, this.startCompleteLevel, "Activity {} started");
-        return logger;
+    public ExecutionContext onExecutionStarted(final Activity.Execution execution, final Logger logger) {
+        final ExecutionId id = execution.getId();
+        log(logger, this.startCompleteLevel, "Started {}", id);
+        return new ExecutionContext(logger, id);
     }
 
     @Override
-    public void onExecutionFailure(final Logger logger, final Throwable failure) {
-        log(logger, this.failLevel, "Failure in activity {}", failure);
+    public void onExecutionFailure(final ExecutionContext context, final Throwable failure) {
+        log(context.logger, this.failLevel, "Failure in {}", context.id, failure);
     }
 
     @Override
-    public void onExecutionCompleted(final Logger logger) {
-        log(logger, this.startCompleteLevel, "Activity {} completed");
+    public void onExecutionCompleted(final ExecutionContext context) {
+        log(context.logger, this.startCompleteLevel, "Completed {}", context.id);
     }
 
     /* This method is dumb. Why doesn't SLF4J have something like this built
@@ -107,6 +110,17 @@ public final class Slf4JActivityListener implements ActivityListener<Logger, Log
         DEBUG,
         TRACE,
         OFF
+    }
+
+
+    public static final class ExecutionContext {
+        private final Logger logger;
+        private final ExecutionId id;
+
+        private ExecutionContext(final Logger logger, final ExecutionId id) {
+            this.logger = logger;
+            this.id = id;
+        }
     }
 
 }

@@ -18,6 +18,7 @@ import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 
 /**
@@ -32,6 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public abstract class Activity implements Executor {
 
     private final ActivityId id;
+    private final AtomicLong executionCounter = new AtomicLong(0L);
 
 
     /**
@@ -56,9 +58,20 @@ public abstract class Activity implements Executor {
      * Start this activity and inform the listener. Do not attempt to recover
      * from any exception thrown by the latter.
      *
-     * @see ActivityListener#onExecutionStarted(Object)
+     * @see ActivityListener#onExecutionStarted(Execution, Object)
      */
-    public abstract Execution start();
+    public abstract Execution start(Object executionContext);
+
+    /**
+     * Start this activity and inform the listener. Do not attempt to recover
+     * from any exception thrown by the latter.
+     *
+     * @see ActivityListener#onExecutionStarted(Execution, Object)
+     */
+    public Execution start() {
+        final long ordinal = this.executionCounter.getAndIncrement();
+        return start(ordinal);
+    }
 
     /**
      * Wrap the given {@link Runnable} in a new Runnable that starts a new
@@ -109,7 +122,8 @@ public abstract class Activity implements Executor {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + '(' + this.id + ')';
+        // Private subclass masquerades as public class:
+        return Activity.class.getSimpleName() + '(' + this.id + ')';
     }
 
     private Activity(final ActivityId id) {
@@ -117,8 +131,18 @@ public abstract class Activity implements Executor {
     }
 
 
-    public interface Execution extends AutoCloseable {
-        Activity getActivity();
+    public static abstract class Execution implements AutoCloseable {
+        private final ExecutionId id;
+
+        private Execution(final ExecutionId id) {
+            this.id = Objects.requireNonNull(id);
+        }
+
+        public ExecutionId getId() {
+            return this.id;
+        }
+
+        public abstract Activity getParent();
 
         /**
          * Inform the listener of the given failure. Do not attempt to recover
@@ -126,7 +150,7 @@ public abstract class Activity implements Executor {
          *
          * @see ActivityListener#onExecutionFailure(Object, Throwable)
          */
-        void failureOccurred(final Throwable failure);
+        public abstract void failureOccurred(final Throwable failure);
 
         /**
          * Complete this Execution, and inform the listener. Do not attempt to
@@ -135,7 +159,13 @@ public abstract class Activity implements Executor {
          * @see ActivityListener#onExecutionCompleted(Object)
          */
         @Override
-        void close();
+        public abstract void close();
+
+        @Override
+        public String toString() {
+            // Private subclass masquerades as public class:
+            return Execution.class.getSimpleName() + '(' + this.id + ')';
+        }
     }
 
 
@@ -150,51 +180,55 @@ public abstract class Activity implements Executor {
         }
 
         @Override
-        public Execution start() {
-            synchronized (this.listener) {
-                /* If onExecutionStarted() fails, we can't call onExecutionFailure(),
-                 * because we don't have the context.
-                 */
-                final EC context = this.listener.onExecutionStarted(this.activityContext);
-                return new ExecutionImpl<EC>(this, context);
-            }
+        public Execution start(final Object executionContext) {
+            final ExecutionId execId = new ExecutionId(getId(), executionContext);
+            return new ExecutionImpl<AC, EC>(execId, this);
         }
     }
 
 
-    private static final class ExecutionImpl<EC> implements Execution {
+    private static final class ExecutionImpl<AC, EC> extends Execution {
         private final AtomicBoolean closed = new AtomicBoolean(false);
-        private final ActivityImpl<?, EC> activity;
+        private final ActivityImpl<AC, EC> activity;
         private final EC executionContext;
 
-        private ExecutionImpl(final ActivityImpl<?, EC> activity, final EC executionContext) {
+        private ExecutionImpl(final ExecutionId id, final ActivityImpl<AC, EC> activity) {
+            super(id);
             this.activity = activity;
-            this.executionContext = executionContext;
+
+            synchronized (this.activity.listener) {
+                /* If onExecutionStarted() fails, we can't call onExecutionFailure(),
+                 * because we don't have the context.
+                 */
+                this.executionContext = this.activity.listener.onExecutionStarted(
+                        this,
+                        this.activity.activityContext);
+            }
         }
 
         @Override
-        public Activity getActivity() {
+        public Activity getParent() {
             return this.activity;
         }
 
         @Override
         public void failureOccurred(final Throwable failure) {
-            final ActivityListener<?, EC> listener = this.activity.listener;
-            synchronized (listener) {
-                listener.onExecutionFailure(this.executionContext, failure);
+            synchronized (this.activity.listener) {
+                this.activity.listener.onExecutionFailure(
+                        this.executionContext,
+                        failure);
             }
         }
 
         @Override
         public void close() {
             if (this.closed.getAndSet(true)) {
-                final ActivityListener<?, EC> listener = this.activity.listener;
-                synchronized (listener) {
+                synchronized (this.activity.listener) {
                     /* If onExecutionCompleted() fails, we can't call
                      * onExecutionFailure(), because we have a guarantee not
                      * to call the latter after the former.
                      */
-                    listener.onExecutionCompleted(this.executionContext);
+                    this.activity.listener.onExecutionCompleted(this.executionContext);
                 }
             }
         }

@@ -50,12 +50,12 @@ public interface ActivityListener<AC, EC> {
      * @return  Any per-Execution context that this listener may need. If no
      *          per-Execution context is needed, simply return the argument.
      */
-    EC onExecutionStarted(AC activityContext);
+    EC onExecutionStarted(Activity.Execution execution, AC activityContext);
 
     /**
      * A full or partial failure occurred along the way. This method may be
      * called zero or more times at any point in between
-     * {@link #onExecutionStarted(Object)} and
+     * {@link #onExecutionStarted(Activity.Execution, Object)} and
      * {@link #onExecutionCompleted(Object)}.
      *
      * Since this method will be called in the context of a previous failure,
@@ -65,9 +65,9 @@ public interface ActivityListener<AC, EC> {
 
     /**
      * A particular {@link Activity.Execution} has completed. This method must
-     * be called after {@link #onExecutionStarted(Object)} and after any calls
-     * to {@link #onExecutionFailure(Object, Throwable)}, and must be called
-     * only once for any given Execution.
+     * be called after {@link #onExecutionStarted(Activity.Execution, Object)}
+     * and after any calls to {@link #onExecutionFailure(Object, Throwable)},
+     * and must be called only once for any given Execution.
      */
     void onExecutionCompleted(EC activityContext);
 

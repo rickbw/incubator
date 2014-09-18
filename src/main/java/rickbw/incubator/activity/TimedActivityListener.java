@@ -48,7 +48,7 @@ public final class TimedActivityListener implements ActivityListener<TimedActivi
     }
 
     @Override
-    public TimedExecution onExecutionStarted(final TimedActivity timed) {
+    public TimedExecution onExecutionStarted(final Activity.Execution execution, final TimedActivity timed) {
         return new TimedExecution(timed);
     }
 
