@@ -83,7 +83,26 @@ public final class ActivityId {
         return new ActivityId(klazz.getPackage().getName(), klazz.getSimpleName(), methodName);
     }
 
-    // TODO: Add "parse" factory method
+    /**
+     * Parse the given string into a group name, a type name, and an activity
+     * name. The format is assumed to have the structure group.type.activity,
+     * where any extra dots are considered to be part of the group.
+     *
+     * @throws NullPointerException         If the given string is null.
+     * @throws IndexOutOfBoundsException    If the given string doesn't
+     *                                      contain at least two dots.
+     * @throws IllegalArgumentException     If any of the parsed names are
+     *                                      empty.
+     */
+    public static ActivityId parse(final String dotDelimitedPath) {
+        final int activityDelimIndex = dotDelimitedPath.lastIndexOf('.');
+        final String activityName = dotDelimitedPath.substring(activityDelimIndex + 1);
+        final String groupAndType = dotDelimitedPath.substring(0, activityDelimIndex);
+        final int typeDelimIndex = groupAndType.lastIndexOf('.');
+        final String typeName = groupAndType.substring(typeDelimIndex + 1);
+        final String groupName = groupAndType.substring(0, typeDelimIndex);
+        return new ActivityId(groupName, typeName, activityName);
+    }
 
     public String getGroupName() {
         return this.groupName;
