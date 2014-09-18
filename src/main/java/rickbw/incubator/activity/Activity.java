@@ -20,6 +20,9 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+
 
 /**
  * An Activity represents a series of actions carried out by an application.
@@ -46,7 +49,7 @@ public abstract class Activity implements Executor {
      */
     public static <AC, EC> Activity create(
             final ActivityId id,
-            final ActivityListener<AC, EC> listener) {
+            final Supplier<ActivityListener<AC, EC>> listener) {
         return new ActivityImpl<>(id, listener);
     }
 
@@ -170,17 +173,21 @@ public abstract class Activity implements Executor {
 
 
     private static final class ActivityImpl<AC, EC> extends Activity {
-        private final ActivityListener<AC, EC> listener;
-        private final AC activityContext;
+        private final AtomicBoolean initializedYet = new AtomicBoolean(false);
+        private final Supplier<ActivityListener<AC, EC>> listener;
+        private volatile AC activityContext = null;
 
-        private ActivityImpl(final ActivityId id, final ActivityListener<AC, EC> listener) {
+        private ActivityImpl(final ActivityId id, final Supplier<ActivityListener<AC, EC>> listener) {
             super(id);
-            this.listener = listener;
-            this.activityContext = this.listener.onActivityInitialized(this);
+            this.listener = SynchronizedActivityListener.supply(Suppliers.memoize(listener));
         }
 
         @Override
         public Execution start(final Object executionContext) {
+            if (!this.initializedYet.getAndSet(true)) {
+                this.activityContext = this.listener.get().onActivityInitialized(this);
+            }
+
             final ExecutionId execId = new ExecutionId(getId(), executionContext);
             return new ExecutionImpl<AC, EC>(execId, this);
         }
@@ -196,11 +203,12 @@ public abstract class Activity implements Executor {
             super(id);
             this.activity = activity;
 
-            synchronized (this.activity.listener) {
+            final ActivityListener<AC, EC> listener = listener();
+            synchronized (listener) {
                 /* If onExecutionStarted() fails, we can't call onExecutionFailure(),
                  * because we don't have the context.
                  */
-                this.executionContext = this.activity.listener.onExecutionStarted(
+                this.executionContext = listener.onExecutionStarted(
                         this,
                         this.activity.activityContext);
             }
@@ -213,8 +221,9 @@ public abstract class Activity implements Executor {
 
         @Override
         public void failureOccurred(final Throwable failure) {
-            synchronized (this.activity.listener) {
-                this.activity.listener.onExecutionFailure(
+            final ActivityListener<AC, EC> listener = listener();
+            synchronized (listener) {
+                listener.onExecutionFailure(
                         this.executionContext,
                         failure);
             }
@@ -223,14 +232,19 @@ public abstract class Activity implements Executor {
         @Override
         public void close() {
             if (this.closed.getAndSet(true)) {
-                synchronized (this.activity.listener) {
+                final ActivityListener<AC, EC> listener = listener();
+                synchronized (listener) {
                     /* If onExecutionCompleted() fails, we can't call
                      * onExecutionFailure(), because we have a guarantee not
                      * to call the latter after the former.
                      */
-                    this.activity.listener.onExecutionCompleted(this.executionContext);
+                    listener.onExecutionCompleted(this.executionContext);
                 }
             }
+        }
+
+        private ActivityListener<AC, EC> listener() {
+            return this.activity.listener.get();
         }
     }
 
