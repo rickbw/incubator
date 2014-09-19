@@ -22,27 +22,28 @@ public class ActivityExample implements Runnable {
 
     private static final ActivityListenerRegistry registry = ActivityListenerRegistry.shared();
 
+    private static final ActivityId idOfProgram = ActivityId.forMethodName(
+            ActivityExample.class,
+            "run");
     private static final ActivityId idOfAmazingActivity = ActivityId.forMethodName(
             ActivityExample.class,
-            "amazing");
+            "doSomethingAmazing");
     private static final ActivityId idOfSomewhatAmazingActivity = ActivityId.forMethodName(
             ActivityExample.class,
-            "somewhatAmazing");
+            "doSomethingElseAmazing");
 
-    private final Activity amazingActivity = Activity.create(
-            idOfAmazingActivity,
-            registry.asFailableSupplier(idOfAmazingActivity));
-    private final Activity otherAmazingActivity = Activity.create(
-            idOfSomewhatAmazingActivity,
-            registry.asFailableSupplier(idOfSomewhatAmazingActivity));
+    private final Activity programActivity = registry.createActivity(idOfProgram);
+    private final Activity amazingActivity = registry.createActivity(idOfAmazingActivity);
+    private final Activity otherAmazingActivity = registry.createActivity(idOfSomewhatAmazingActivity);
 
 
     public static void main(final String... args) {
+        registry.add(idOfProgram, new Slf4JActivityListener(LogLevel.INFO, LogLevel.DEBUG, LogLevel.ERROR));
         registry.add(idOfAmazingActivity, new Slf4JActivityListener(LogLevel.INFO, LogLevel.WARN));
-        registry.add(idOfSomewhatAmazingActivity, new Slf4JActivityListener(LogLevel.DEBUG, LogLevel.TRACE, LogLevel.ERROR));
+        registry.add(idOfSomewhatAmazingActivity, new Slf4JActivityListener());
 
         final ActivityExample example = new ActivityExample();
-        example.run();
+        example.programActivity.execute(example, "MyProgram");
     }
 
     @Override

@@ -75,7 +75,7 @@ public abstract class Activity implements Executor {
      * @see ActivityListener#onExecutionStarted(Execution, Object)
      */
     public Execution start() {
-        final long ordinal = this.executionCounter.getAndIncrement();
+        final long ordinal = nextDefaultExecutionName();
         return start(ordinal);
     }
 
@@ -85,10 +85,19 @@ public abstract class Activity implements Executor {
      * Execution afterwards.
      */
     public Runnable wrap(final Runnable task) {
+        return wrap(task, nextDefaultExecutionName());
+    }
+
+    /**
+     * Wrap the given {@link Runnable} in a new Runnable that starts a new
+     * {@link Execution} before running the given task, then closes that
+     * Execution afterwards.
+     */
+    public Runnable wrap(final Runnable task, final Object executionName) {
         return new Runnable() {
             @Override
             public void run() {
-                try (Execution exec = start()) {
+                try (Execution exec = start(executionName)) {
                     task.run();
                 }
             }
@@ -101,10 +110,19 @@ public abstract class Activity implements Executor {
      * Execution afterwards.
      */
     public <T> Callable<T> wrap(final Callable<T> task) {
+        return wrap(task, nextDefaultExecutionName());
+    }
+
+    /**
+     * Wrap the given {@link Callable} in a new Callable that starts a new
+     * {@link Execution} before running the given task, then closes that
+     * Execution afterwards.
+     */
+    public <T> Callable<T> wrap(final Callable<T> task, final Object executionName) {
         return new Callable<T>() {
             @Override
             public T call() throws Exception {
-                try (Execution exec = start()) {
+                try (Execution exec = start(executionName)) {
                     return task.call();
                 }
             }
@@ -122,8 +140,22 @@ public abstract class Activity implements Executor {
     /**
      * Run a given task in the current thread within a new {@link Execution}.
      */
+    public void execute(final Runnable task, final Object executionName) {
+        wrap(task, executionName).run();
+    }
+
+    /**
+     * Run a given task in the current thread within a new {@link Execution}.
+     */
     public <T> T execute(final Callable<T> task) throws Exception {
         return wrap(task).call();
+    }
+
+    /**
+     * Run a given task in the current thread within a new {@link Execution}.
+     */
+    public <T> T execute(final Callable<T> task, final Object executionName) throws Exception {
+        return wrap(task, executionName).call();
     }
 
     @Override
@@ -134,6 +166,10 @@ public abstract class Activity implements Executor {
 
     private Activity(final ActivityId id) {
         this.id = Objects.requireNonNull(id);
+    }
+
+    private long nextDefaultExecutionName() {
+        return this.executionCounter.getAndIncrement();
     }
 
 

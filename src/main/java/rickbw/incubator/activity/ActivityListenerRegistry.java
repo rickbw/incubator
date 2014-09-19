@@ -63,6 +63,10 @@ public class ActivityListenerRegistry {
                 Optional.<ActivityListener<?, ?>>of(defaultListener));
     }
 
+    public Activity createActivity(final ActivityId id) {
+        return Activity.create(id, asFailableSupplier(id));
+    }
+
     public void add(final ActivityId id, final ActivityListener<?, ?> listener) {
         final CompositeActivityListener newValue = (this.listenersById.containsKey(id))
             ? this.listenersById.get(id).plus(listener)
