@@ -15,7 +15,8 @@
 package rickbw.incubator.activity;
 
 import rickbw.incubator.activity.Activity.Execution;
-import rickbw.incubator.activity.Slf4JActivityListener.LogLevel;
+import rickbw.incubator.activity.listeners.Slf4JActivityListener;
+import rickbw.incubator.activity.listeners.Slf4JActivityListener.LogLevel;
 
 
 public class ActivityExample implements Runnable {
@@ -43,16 +44,16 @@ public class ActivityExample implements Runnable {
         registry.add(idOfSomewhatAmazingActivity, new Slf4JActivityListener());
 
         final ActivityExample example = new ActivityExample();
-        example.programActivity.execute(example, "MyProgram");
+        example.programActivity.execution().withName("MyProgram").wrap(example).run();
     }
 
     @Override
     public void run() {
-        try (Execution exec = this.amazingActivity.start()) {
+        try (Execution exec = this.amazingActivity.execution().start()) {
             doSomethingAmazing();
         }
 
-        try (Execution exec = this.otherAmazingActivity.start()) {
+        try (Execution exec = this.otherAmazingActivity.execution().start()) {
             doSomethingElseAmazing();
         }
     }

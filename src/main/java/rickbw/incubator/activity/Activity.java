@@ -17,11 +17,9 @@ package rickbw.incubator.activity;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 
 
 /**
@@ -31,21 +29,24 @@ import com.google.common.base.Suppliers;
  * a whole, it has a beginning and an end.
  *
  * An Activity, and all of its Executions, report what they do to an
- * {@link ActivityListener}.
+ * {@link ActivityListener}. That "plug-in" type is the point of extensibility
+ * in the Activity framework.
  */
 public abstract class Activity implements Executor {
 
     private final ActivityId id;
-    private final AtomicLong executionCounter = new AtomicLong(0L);
 
 
     /**
-     * Create a new Activity with the given ID that will report to the given
-     * listener.
+     * Create a new {@link Activity} with the given ID that will report to the
+     * given listener.
+     *
+     * The call to {@link ActivityListener#onActivityInitialized(Activity)}
+     * will be made at some time in between the call to this factory method
+     * and the completion of the first call to {@link ExecutionBuilder#start()}.
+     * The exact time is unspecified.
      *
      * @throws  NullPointerException    If either argument is null.
-     *
-     * @see ActivityListener#onActivityInitialized(Activity)
      */
     public static Activity create(
             final ActivityId id,
@@ -56,135 +57,70 @@ public abstract class Activity implements Executor {
         return activity;
     }
 
-    public ActivityId getId() {
+    public final ActivityId getId() {
         return this.id;
     }
 
     /**
-     * Start this activity and inform the listener. Do not attempt to recover
-     * from any exception thrown by the latter.
+     * Prepare to start a new {@link Execution} of this Activity.
      *
-     * @see ActivityListener#onExecutionStarted(Execution, Object)
+     * @see ExecutionBuilder#start()
      */
-    public abstract Execution start(Object executionName);
-
-    /**
-     * Start this activity and inform the listener. Do not attempt to recover
-     * from any exception thrown by the latter.
-     *
-     * @see ActivityListener#onExecutionStarted(Execution, Object)
-     */
-    public Execution start() {
-        final long ordinal = nextDefaultExecutionName();
-        return start(ordinal);
-    }
-
-    /**
-     * Wrap the given {@link Runnable} in a new Runnable that starts a new
-     * {@link Execution} before running the given task, then closes that
-     * Execution afterwards.
-     */
-    public Runnable wrap(final Runnable task) {
-        return wrap(task, nextDefaultExecutionName());
-    }
-
-    /**
-     * Wrap the given {@link Runnable} in a new Runnable that starts a new
-     * {@link Execution} before running the given task, then closes that
-     * Execution afterwards.
-     */
-    public Runnable wrap(final Runnable task, final Object executionName) {
-        return new Runnable() {
-            @Override
-            public void run() {
-                try (Execution exec = start(executionName)) {
-                    task.run();
-                }
-            }
-        };
-    }
-
-    /**
-     * Wrap the given {@link Callable} in a new Callable that starts a new
-     * {@link Execution} before running the given task, then closes that
-     * Execution afterwards.
-     */
-    public <T> Callable<T> wrap(final Callable<T> task) {
-        return wrap(task, nextDefaultExecutionName());
-    }
-
-    /**
-     * Wrap the given {@link Callable} in a new Callable that starts a new
-     * {@link Execution} before running the given task, then closes that
-     * Execution afterwards.
-     */
-    public <T> Callable<T> wrap(final Callable<T> task, final Object executionName) {
-        return new Callable<T>() {
-            @Override
-            public T call() throws Exception {
-                try (Execution exec = start(executionName)) {
-                    return task.call();
-                }
-            }
-        };
-    }
+    public abstract ExecutionBuilder execution();
 
     /**
      * Run a given task in the current thread within a new {@link Execution}.
+     * This is a convenience API, equivalent to creating a new
+     * {@link ExecutionBuilder}, using it to wrap the given task, and then
+     * running that task.
+     *
+     * @see #execution()
+     * @see ExecutionBuilder#wrap(Runnable)
      */
     @Override
-    public void execute(final Runnable task) {
-        wrap(task).run();
-    }
-
-    /**
-     * Run a given task in the current thread within a new {@link Execution}.
-     */
-    public void execute(final Runnable task, final Object executionName) {
-        wrap(task, executionName).run();
-    }
-
-    /**
-     * Run a given task in the current thread within a new {@link Execution}.
-     */
-    public <T> T execute(final Callable<T> task) throws Exception {
-        return wrap(task).call();
-    }
-
-    /**
-     * Run a given task in the current thread within a new {@link Execution}.
-     */
-    public <T> T execute(final Callable<T> task, final Object executionName) throws Exception {
-        return wrap(task, executionName).call();
+    public final void execute(final Runnable task) {
+        execution().wrap(task).run();
     }
 
     @Override
-    public String toString() {
+    public final String toString() {
         // Private subclass masquerades as public class:
         return Activity.class.getSimpleName() + '(' + this.id + ')';
     }
 
-    private Activity(final ActivityId id) {
+    /*package*/ Activity(final ActivityId id) {
         this.id = Objects.requireNonNull(id);
     }
 
-    private long nextDefaultExecutionName() {
-        return this.executionCounter.getAndIncrement();
-    }
 
-
+    /**
+     * An {@link Activity} may be run multiple times; this is one of them.
+     * It begins with a call to {@link ExecutionBuilder#start()}, and ends
+     * with a call to {@link #close()}.
+     */
     public static abstract class Execution implements AutoCloseable {
         private final ExecutionId id;
 
-        private Execution(final ExecutionId id) {
+        /*package*/ Execution(final ExecutionId id) {
             this.id = Objects.requireNonNull(id);
         }
 
-        public ExecutionId getId() {
+        public final ExecutionId getId() {
             return this.id;
         }
 
-        public abstract Activity getParent();
+        /**
+         * @return  The {@link Activity} of which this Execution is an
+         *          "instance".
+         */
+        public abstract Activity getOwner();
+
+        /**
+         * The Execution of one {@link Activity} may be a sub-task within the
+         * Execution of another Activity. If such is the case with this
+         * Execution, return that containing Execution.
+         */
+        public abstract Optional<Execution> getParent();
 
         /**
          * Inform the listener of the given failure. Do not attempt to recover
@@ -204,86 +140,93 @@ public abstract class Activity implements Executor {
         public abstract void close();
 
         @Override
-        public String toString() {
+        public final String toString() {
             // Private subclass masquerades as public class:
             return Execution.class.getSimpleName() + '(' + this.id + ')';
         }
     }
 
 
-    private static final class ActivityImpl<AC, EC> extends Activity {
-        private final AtomicBoolean initializedYet = new AtomicBoolean(false);
-        private final Supplier<ActivityListener<AC, EC>> listener;
-        private volatile AC activityContext = null;
+    /**
+     * Constructs and launches a new {@link Execution}.
+     *
+     * @see Activity#execution()
+     * @see #start()
+     */
+    public static abstract class ExecutionBuilder {
+        /**
+         * The {@link ExecutionId} of the new {@link Execution} will be
+         * comprised of the {@link ActivityId} of the owning {@link Activity}
+         * and of the given "execution name".
+         *
+         * This is an optional call. If it is not called, in incrementing
+         * counter will be used instead.
+         */
+        public abstract ExecutionBuilder withName(final Object name);
 
-        private ActivityImpl(final ActivityId id, final Supplier<ActivityListener<AC, EC>> listener) {
-            super(id);
-            this.listener = SynchronizedActivityListener.supply(Suppliers.memoize(listener));
-        }
+        /**
+         * Indicate that the new {@link Execution} should be considered a
+         * sub-task within the given Execution.
+         *
+         * This is an optional call. If it is not called, an attempt will be
+         * made to infer a parent Execution based on the currently running
+         * thread.
+         */
+        public abstract ExecutionBuilder within(final Execution parent);
 
-        @Override
-        public Execution start(final Object executionName) {
-            if (!this.initializedYet.getAndSet(true)) {
-                this.activityContext = this.listener.get().onActivityInitialized(this);
-            }
+        /**
+         * Start a new {@link Execution} and inform the listener. Do not
+         * attempt to recover from any exception thrown by the latter.
+         *
+         * @see ActivityListener#onExecutionStarted(Execution, Object)
+         */
+        public abstract Execution start();
 
-            final ExecutionId execId = new ExecutionId(getId(), executionName);
-            return new ExecutionImpl<AC, EC>(execId, this);
-        }
-    }
-
-
-    private static final class ExecutionImpl<AC, EC> extends Execution {
-        private final AtomicBoolean closed = new AtomicBoolean(false);
-        private final ActivityImpl<AC, EC> activity;
-        private final EC executionContext;
-
-        private ExecutionImpl(final ExecutionId id, final ActivityImpl<AC, EC> activity) {
-            super(id);
-            this.activity = activity;
-
-            final ActivityListener<AC, EC> listener = listener();
-            synchronized (listener) {
-                /* If onExecutionStarted() fails, we can't call onExecutionFailure(),
-                 * because we don't have the context.
-                 */
-                this.executionContext = listener.onExecutionStarted(
-                        this,
-                        this.activity.activityContext);
-            }
-        }
-
-        @Override
-        public Activity getParent() {
-            return this.activity;
-        }
-
-        @Override
-        public void failureOccurred(final Throwable failure) {
-            final ActivityListener<AC, EC> listener = listener();
-            synchronized (listener) {
-                listener.onExecutionFailure(
-                        this.executionContext,
-                        failure);
-            }
-        }
-
-        @Override
-        public void close() {
-            if (!this.closed.getAndSet(true)) {
-                final ActivityListener<AC, EC> listener = listener();
-                synchronized (listener) {
-                    /* If onExecutionCompleted() fails, we can't call
-                     * onExecutionFailure(), because we have a guarantee not
-                     * to call the latter after the former.
-                     */
-                    listener.onExecutionCompleted(this.executionContext);
+        /**
+         * Wrap the given {@link Runnable} in a new Runnable that starts a new
+         * {@link Execution} before running the given task, then closes that
+         * Execution afterwards.
+         */
+        public final Runnable wrap(final Runnable task) {
+            final ExecutionBuilder protectedAgainstFutureMutation = deepCopy();
+            return new Runnable() {
+                @Override
+                public void run() {
+                    try (Execution exec = protectedAgainstFutureMutation.start()) {
+                        task.run();
+                    }
                 }
-            }
+            };
         }
 
-        private ActivityListener<AC, EC> listener() {
-            return this.activity.listener.get();
+        /**
+         * Wrap the given {@link Runnable} in a new Runnable that starts a new
+         * {@link Execution} before running the given task, then closes that
+         * Execution afterwards.
+         */
+        public final <T> Callable<T> wrap(final Callable<T> task) {
+            final ExecutionBuilder protectedAgainstFutureMutation = deepCopy();
+            return new Callable<T>() {
+                @Override
+                public T call() throws Exception {
+                    try (Execution exec = protectedAgainstFutureMutation.start()) {
+                        return task.call();
+                    }
+                }
+            };
+        }
+
+        /*package*/ ExecutionBuilder() {
+            // prevent unintended instantiation
+        }
+
+        private ExecutionBuilder deepCopy() {
+            try {
+                return (ExecutionBuilder) clone();
+            } catch (final CloneNotSupportedException ex) {
+                // ActivityImpl.ExecutionBuilderImpl should implement Cloneable
+                throw new AssertionError("unreachable");
+            }
         }
     }
 

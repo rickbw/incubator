@@ -12,7 +12,7 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package rickbw.incubator.activity;
+package rickbw.incubator.activity.listeners;
 
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -23,8 +23,12 @@ import com.yammer.metrics.core.Meter;
 import com.yammer.metrics.core.MetricName;
 import com.yammer.metrics.core.Timer;
 
-import rickbw.incubator.activity.TimedActivityListener.TimedActivity;
-import rickbw.incubator.activity.TimedActivityListener.TimedExecution;
+import rickbw.incubator.activity.Activity;
+import rickbw.incubator.activity.ActivityId;
+import rickbw.incubator.activity.ActivityListener;
+import rickbw.incubator.activity.Activity.Execution;
+import rickbw.incubator.activity.listeners.TimedActivityListener.TimedActivity;
+import rickbw.incubator.activity.listeners.TimedActivityListener.TimedExecution;
 
 
 public final class TimedActivityListener implements ActivityListener<TimedActivity, TimedExecution> {
