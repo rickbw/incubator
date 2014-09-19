@@ -28,21 +28,31 @@ import rickbw.incubator.activity.Slf4JActivityListener.ExecutionContext;
  */
 public final class Slf4JActivityListener implements ActivityListener<Logger, ExecutionContext> {
 
-    public static final LogLevel DEFAULT_START_COMPLETE_LEVEL = LogLevel.INFO;
-    public static final LogLevel DEFAULT_FAIL_LEVEL = LogLevel.ERROR;
+    private static final LogLevel DEFAULT_START_LEVEL = LogLevel.INFO;
+    private static final LogLevel DEFAULT_COMPLETE_LEVEL = LogLevel.TRACE;
+    private static final LogLevel DEFAULT_FAIL_LEVEL = LogLevel.ERROR;
 
-    private final LogLevel startCompleteLevel;
+    private final LogLevel startLevel;
+    private final LogLevel completeLevel;
     private final LogLevel failLevel;
 
 
     public Slf4JActivityListener() {
-        this(DEFAULT_START_COMPLETE_LEVEL, DEFAULT_FAIL_LEVEL);
+        this(DEFAULT_START_LEVEL, DEFAULT_COMPLETE_LEVEL, DEFAULT_FAIL_LEVEL);
     }
 
     public Slf4JActivityListener(
             final LogLevel startCompleteLevel,
             final LogLevel failLevel) {
-        this.startCompleteLevel = Objects.requireNonNull(startCompleteLevel);
+        this(startCompleteLevel, startCompleteLevel, failLevel);
+    }
+
+    public Slf4JActivityListener(
+            final LogLevel startLevel,
+            final LogLevel completeLevel,
+            final LogLevel failLevel) {
+        this.startLevel = Objects.requireNonNull(startLevel);
+        this.completeLevel = Objects.requireNonNull(completeLevel);
         this.failLevel = Objects.requireNonNull(failLevel);
     }
 
@@ -56,7 +66,7 @@ public final class Slf4JActivityListener implements ActivityListener<Logger, Exe
     @Override
     public ExecutionContext onExecutionStarted(final Activity.Execution execution, final Logger logger) {
         final ExecutionId id = execution.getId();
-        log(logger, this.startCompleteLevel, "Started {}", id);
+        log(logger, this.startLevel, "Started {}", id);
         return new ExecutionContext(logger, id);
     }
 
@@ -67,7 +77,7 @@ public final class Slf4JActivityListener implements ActivityListener<Logger, Exe
 
     @Override
     public void onExecutionCompleted(final ExecutionContext context) {
-        log(context.logger, this.startCompleteLevel, "Completed {}", context.id);
+        log(context.logger, this.completeLevel, "Completed {}", context.id);
     }
 
     /* This method is dumb. Why doesn't SLF4J have something like this built
