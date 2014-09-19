@@ -66,7 +66,7 @@ public abstract class Activity implements Executor {
      *
      * @see ActivityListener#onExecutionStarted(Execution, Object)
      */
-    public abstract Execution start(Object executionContext);
+    public abstract Execution start(Object executionName);
 
     /**
      * Start this activity and inform the listener. Do not attempt to recover
@@ -186,12 +186,12 @@ public abstract class Activity implements Executor {
         }
 
         @Override
-        public Execution start(final Object executionContext) {
+        public Execution start(final Object executionName) {
             if (!this.initializedYet.getAndSet(true)) {
                 this.activityContext = this.listener.get().onActivityInitialized(this);
             }
 
-            final ExecutionId execId = new ExecutionId(getId(), executionContext);
+            final ExecutionId execId = new ExecutionId(getId(), executionName);
             return new ExecutionImpl<AC, EC>(execId, this);
         }
     }

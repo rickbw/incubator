@@ -25,20 +25,20 @@ import rickbw.incubator.activity.Activity.Execution;
 public final class ExecutionId {
 
     private final ActivityId parentId;
-    private final Object executionContext;
+    private final Object executionName;
 
 
     /**
      * @param parentId  The ID of the {@link Activity} that spawned the
      *                  {@link Execution} this ID identifies.
-     * @param executionContext  A small, immutable piece of context specific
+     * @param executionName A small, immutable piece of context specific
      *                  to one Execution. Could be a name, an identifier for
      *                  an application-specific resource, or something else.
      *                  May not be null.
      */
-    public ExecutionId(final ActivityId parentId, final Object executionContext) {
+    public ExecutionId(final ActivityId parentId, final Object executionName) {
         this.parentId = Objects.requireNonNull(parentId);
-        this.executionContext = Objects.requireNonNull(executionContext);
+        this.executionName = Objects.requireNonNull(executionName);
     }
 
     public ActivityId getParentId() {
@@ -48,7 +48,7 @@ public final class ExecutionId {
     @Override
     public String toString() {
         // TODO: Cache this to speed it up
-        return this.executionContext + "@" + this.parentId;
+        return this.executionName + "@" + this.parentId;
     }
 
     @Override
@@ -67,7 +67,7 @@ public final class ExecutionId {
         if (!this.parentId.equals(other.parentId)) {
             return false;
         }
-        if (!this.executionContext.equals(other.executionContext)) {
+        if (!this.executionName.equals(other.executionName)) {
             return false;
         }
         return true;
@@ -78,7 +78,7 @@ public final class ExecutionId {
         // TODO: Speed this up
         final int prime = 31;
         int result = 1;
-        result = prime * result + this.executionContext.hashCode();
+        result = prime * result + this.executionName.hashCode();
         result = prime * result + this.parentId.hashCode();
         return result;
     }
