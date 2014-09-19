@@ -47,10 +47,13 @@ public abstract class Activity implements Executor {
      *
      * @see ActivityListener#onActivityInitialized(Activity)
      */
-    public static <AC, EC> Activity create(
+    public static Activity create(
             final ActivityId id,
-            final Supplier<ActivityListener<AC, EC>> listener) {
-        return new ActivityImpl<>(id, listener);
+            final Supplier<ActivityListener<?, ?>> listener) {
+        // XXX: We ought to be able to make this safe...
+        @SuppressWarnings({ "rawtypes", "unchecked" })
+        final Activity activity = new ActivityImpl(id, listener);
+        return activity;
     }
 
     public ActivityId getId() {
@@ -231,7 +234,7 @@ public abstract class Activity implements Executor {
 
         @Override
         public void close() {
-            if (this.closed.getAndSet(true)) {
+            if (!this.closed.getAndSet(true)) {
                 final ActivityListener<AC, EC> listener = listener();
                 synchronized (listener) {
                     /* If onExecutionCompleted() fails, we can't call

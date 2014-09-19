@@ -48,7 +48,7 @@ public final class ExecutionId {
     @Override
     public String toString() {
         // TODO: Cache this to speed it up
-        return this.executionContext + "@" + this.executionContext;
+        return this.executionContext + "@" + this.parentId;
     }
 
     @Override
