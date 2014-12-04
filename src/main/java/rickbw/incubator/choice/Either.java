@@ -28,6 +28,11 @@ import com.google.common.base.Supplier;
  * An immutable pair of elements, in which only one is present. This class is
  * the extension of Guava's {@link Optional} from one choice to two.
  *
+ * This class may be used to represent an exclusive choice between a
+ * "successful" result and a "failure" result, as an alternative to throwing
+ * an exception. In such cases, by convention, the successful result is should
+ * be placed on the right side, and the failure on the left.
+ *
  * Unless otherwise specified, the methods of this class neither accept null
  * on their argument lists nor return it. Passing a null with throw
  * {@link NullPointerException}.
