@@ -17,6 +17,9 @@ package rickbw.incubator.datetime;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 
 /**
  * A subclass of {@link Date} that prevents mutation. Normally, using Joda
@@ -28,9 +31,13 @@ import java.util.concurrent.TimeUnit;
 public final class ImmutableDate extends ComparableDate {
 
     /**
-     * The serialVersionUID from our superclass, {@link ComparableDate}.
+     * Retain the same value as our superclass, so that instances of one class
+     * may be translated across the serialization boundary.
+     *
+     * @see ComparableDate#readObject(java.io.ObjectInputStream)
+     * @see ComparableDate#writeObject(java.io.ObjectOutputStream)
      */
-    private static final long serialVersionUID = 7523967970034938905L;
+    private static final long serialVersionUID = ComparableDate.serialVersionUID;
 
 
     /**
@@ -47,11 +54,9 @@ public final class ImmutableDate extends ComparableDate {
      * @return  the given object if it is already of type
      *          {@code ImmutableDate}, or a new immutable copy otherwise.
      *
-     * @throws  NullPointerException    if the given date is null.
-     *
      * @see #nullOrCopyOf(Date)
      */
-    public static ImmutableDate copyOf(final Date date) {
+    public static ImmutableDate copyOf(@Nonnull final Date date) {
         return (date instanceof ImmutableDate)
                 ? (ImmutableDate) date
                 : atMillisSinceEpoch(date.getTime());
@@ -64,7 +69,7 @@ public final class ImmutableDate extends ComparableDate {
      *
      * @see #copyOf(Date)
      */
-    public static ImmutableDate nullOrCopyOf(final Date date) {
+    public static ImmutableDate nullOrCopyOf(@Nullable final Date date) {
         return (date == null) ? null : copyOf(date);
     }
 
@@ -85,12 +90,10 @@ public final class ImmutableDate extends ComparableDate {
      *          that is the given amount of time after the UTC epoch (or
      *          before it, if the value is negative).
      *
-     * @throws  NullPointerException    if the given unit is null.
-     *
      * @see #atMillisSinceEpoch(long)
      * @see Date#Date(long)
      */
-    public static ImmutableDate atTimeSinceEpoch(final long time, final TimeUnit unit) {
+    public static ImmutableDate atTimeSinceEpoch(final long time, @Nonnull final TimeUnit unit) {
         return atMillisSinceEpoch(unit.toMillis(time));
     }
 

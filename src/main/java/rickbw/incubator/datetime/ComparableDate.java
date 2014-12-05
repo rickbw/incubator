@@ -21,10 +21,13 @@ import java.sql.Timestamp;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 
 /**
  * A subclass of {@link Date} that provides for correct, commutative
- * comparison among instances, unlike its subclass. Specifically:
+ * comparison among instances, unlike its superclass. Specifically:
  * <ul>
  *  <li>Instances of this class and concrete instances of
  *      {@code java.util.Date} behave commutatively with respect to
@@ -50,16 +53,21 @@ import java.util.concurrent.TimeUnit;
  *      {@link #before(Date)}, and {@link #after(Date)}. This property bears
  *      mention because of the implied differences in precision among these
  *      types.</li>
- *  <li>This class is serialization-compatible with {@code java.util.Date}.
- *      </li>
  * </ul>
+ *
+ * This class is serialization-compatible with {@code java.util.Date}.
  */
 public class ComparableDate extends Date {
 
     /**
      * The serialVersionUID from our superclass, {@link Date}.
+     * We retain the same value, so that instances of one class may be
+     * translated across the serialization boundary.
+     *
+     * @see #readObject(ObjectInputStream)
+     * @see #writeObject(ObjectOutputStream)
      */
-    private static final long serialVersionUID = 7523967970034938905L;
+    /*package*/ static final long serialVersionUID = 7523967970034938905L;
 
 
     /**
@@ -75,11 +83,9 @@ public class ComparableDate extends Date {
     /**
      * @return  a deep copy of the given date.
      *
-     * @throws  NullPointerException    if the given date is null.
-     *
      * @see #nullOrCopyOf(Date)
      */
-    public static ComparableDate copyOf(final Date date) {
+    public static ComparableDate copyOf(@Nonnull final Date date) {
         return atMillisSinceEpoch(date.getTime());
     }
 
@@ -89,7 +95,7 @@ public class ComparableDate extends Date {
      *
      * @see #copyOf(Date)
      */
-    public static ComparableDate nullOrCopyOf(final Date date) {
+    public static ComparableDate nullOrCopyOf(@Nullable final Date date) {
         return (date == null) ? null : copyOf(date);
     }
 
@@ -110,12 +116,10 @@ public class ComparableDate extends Date {
      *          amount of time after the UTC epoch (or before it, if the value
      *          is negative).
      *
-     * @throws  NullPointerException    if the given unit is null.
-     *
      * @see #atMillisSinceEpoch(long)
      * @see Date#Date(long)
      */
-    public static ComparableDate atTimeSinceEpoch(final long time, final TimeUnit unit) {
+    public static ComparableDate atTimeSinceEpoch(final long time, @Nonnull final TimeUnit unit) {
         return atMillisSinceEpoch(unit.toMillis(time));
     }
 
@@ -160,16 +164,16 @@ public class ComparableDate extends Date {
      * Implements {@code java.util.Date}'s equality contract, with small
      * modifications to provide commutativity.
      * <ol>
-     *  <li>Like with the inherited implementation, this class considers its
+     *  <li>Like the inherited implementation, this class considers its
      *      instances to be equal to any object of exactly type
      *      {@code java.util.Date}, or of this type, that has the same
      *      {@link #getTime() millisecond time} value.</li>
-     *  <li>Unlike with the inherited implementation, this class never
+     *  <li>Unlike the inherited implementation, this class never
      *      considers its instances equal to SQL {@link Timestamp}s, because
      *      {@code Timestamp} does not consider its instances to be equal to
      *      concrete {@code java.util.Date}s, and equality should always be
      *      commutative.</li>
-     *  <li>Like with the inherited implementation, this class considers
+     *  <li>Like the inherited implementation, this class considers
      *      its instances equal to SQL {@link java.sql.Date}s and SQL
      *      {@code java.sql.Times}s with equal millisecond times, even though
      *      they have different implied precisions than
@@ -178,9 +182,10 @@ public class ComparableDate extends Date {
      *      {@code java.util.Date} instances will consider one another equal
      *      if they have the same millisecond time values, and this class
      *      honors that behavior.</li>
-     *  <li>Equality with {@code java.util.Date} subclasses other than those
-     *      mentioned here is undefined.</li>
      * </ol>
+     *
+     * Equality with {@code java.util.Date} subclasses other than those
+     * mentioned here is undefined.
      */
     @Override
     public final boolean equals(final Object obj) {

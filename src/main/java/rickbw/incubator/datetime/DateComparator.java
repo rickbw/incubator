@@ -61,4 +61,8 @@ public abstract class DateComparator implements Comparator<Date> {
         return descending;
     }
 
+    private DateComparator() {
+        // prevent external instantiation
+    }
+
 }
