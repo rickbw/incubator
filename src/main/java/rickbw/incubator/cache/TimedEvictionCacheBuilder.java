@@ -111,9 +111,8 @@ public final class TimedEvictionCacheBuilder<K, V> {
         if (this.periods.isEmpty()) {
             throw new IllegalStateException("no periods defined");
         } else if (this.periods.size() == 1) {
-            final Period period = this.periods.get(0);
             final CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder();
-            configureBuilder(builder, period);
+            configureBuilder(builder, this.periods.get(0));
             return builder.build();
         } else {
             assert this.periods.size() > 1;
@@ -141,9 +140,8 @@ public final class TimedEvictionCacheBuilder<K, V> {
         if (this.periods.isEmpty()) {
             throw new IllegalStateException("no periods defined");
         } else if (this.periods.size() == 1) {
-            final Period period = this.periods.get(0);
             final CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder();
-            configureBuilder(builder, period);
+            configureBuilder(builder, this.periods.get(0));
             return builder.build(loader);
         } else {
             assert this.periods.size() > 1;
@@ -185,7 +183,15 @@ public final class TimedEvictionCacheBuilder<K, V> {
             this.duration = duration;
             Preconditions.checkArgument(this.duration > 0, "Duration must be greater than 0");
 
-            this.durationUnit = durationUnit;
+            this.durationUnit = Objects.requireNonNull(durationUnit);
+        }
+
+        @Override
+        public String toString() {
+            return getClass() + "("
+                    + this.duration + " " + this.durationUnit.toString().toLowerCase()
+                    + "; size="+ this.size
+                    + ")";
         }
     }
 
