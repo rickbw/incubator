@@ -1,4 +1,4 @@
-/* Copyright 2013–2014 Rick Warren
+/* Copyright 2014 Rick Warren
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -75,7 +75,7 @@ public class MultiCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    public @Nullable V getIfPresent(@Nullable final Object elementKey) {
+    public final @Nullable V getIfPresent(@Nullable final Object elementKey) {
         final Cache<K, V> cache = getCache(elementKey);
         if (cache != null) {
             return cache.getIfPresent(elementKey);
@@ -85,7 +85,7 @@ public class MultiCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    public @Nonnull V get(final K elementKey, final Callable<? extends V> valueLoader)
+    public final @Nonnull V get(final K elementKey, final Callable<? extends V> valueLoader)
     throws ExecutionException {
         final Cache<K, V> cache = getCache(elementKey);
         if (cache != null) {
@@ -96,9 +96,9 @@ public class MultiCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    public ImmutableMap<K, V> getAllPresent(final Iterable<?> keys) {
+    public final ImmutableMap<K, V> getAllPresent(final Iterable<?> elementKeys) {
         final ImmutableMap.Builder<K, V> builder = ImmutableMap.builder();
-        for (final Object elementKey : keys) {
+        for (final Object elementKey : elementKeys) {
             final Cache<K, V> cache = getCache(elementKey);
             if (cache != null) {
                 final V value = cache.getIfPresent(elementKey);
@@ -111,13 +111,13 @@ public class MultiCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    public void put(final K elementKey, final V value) {
+    public final void put(final K elementKey, final V value) {
         final Cache<K, V> cache = getCacheNonNull(elementKey);
         cache.put(elementKey, value);
     }
 
     @Override
-    public void putAll(final Map<? extends K, ? extends V> entries) {
+    public final void putAll(final Map<? extends K, ? extends V> entries) {
         for (final Map.Entry<? extends K, ? extends V> entry : entries.entrySet()) {
             final K elementKey = entry.getKey();
             final Cache<K, V> cache = getCacheNonNull(elementKey);
@@ -126,7 +126,7 @@ public class MultiCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    public long size() {
+    public final long size() {
         long totalSize = 0L;
         for (final Cache<?, ?> delegate : this.delegates.values()) {
             totalSize += delegate.size();
@@ -135,12 +135,12 @@ public class MultiCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    public ConcurrentMap<K, V> asMap() {
+    public final ConcurrentMap<K, V> asMap() {
         return this.asMap;
     }
 
     @Override
-    public void invalidate(final Object elementKey) {
+    public final void invalidate(final Object elementKey) {
         final Cache<K, V> cache = getCache(elementKey);
         if (cache != null) {
             cache.invalidate(elementKey);
@@ -148,8 +148,8 @@ public class MultiCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    public void invalidateAll(final Iterable<?> keys) {
-        for (final Object elementKey : keys) {
+    public final void invalidateAll(final Iterable<?> elementKeys) {
+        for (final Object elementKey : elementKeys) {
             final Cache<K, V> cache = getCache(elementKey);
             if (cache != null) {
                 cache.invalidate(elementKey);
@@ -158,27 +158,28 @@ public class MultiCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    public void invalidateAll() {
+    public final void invalidateAll() {
         for (final Cache<?, ?> delegate : this.delegates.values()) {
             delegate.invalidateAll();
         }
     }
 
     @Override
-    public void cleanUp() {
+    public final void cleanUp() {
         for (final Cache<?, ?> delegate : this.delegates.values()) {
             delegate.cleanUp();
         }
     }
 
     @Override
-    public CacheStats stats() {
+    public final CacheStats stats() {
         long hitCount = 0L;
         long missCount = 0L;
         long loadSuccessCount = 0L;
         long loadExceptionCount = 0L;
         long totalLoadTime = 0L;
         long evictionCount = 0L;
+
         for (final Cache<?, ?> delegate : this.delegates.values()) {
             final CacheStats stats = delegate.stats();
             hitCount += stats.hitCount();
@@ -188,6 +189,7 @@ public class MultiCache<K, V> implements Cache<K, V> {
             totalLoadTime += stats.totalLoadTime();
             evictionCount += stats.evictionCount();
         }
+
         return new CacheStats(
                 hitCount,
                 missCount,
@@ -197,26 +199,26 @@ public class MultiCache<K, V> implements Cache<K, V> {
                 evictionCount);
     }
 
-    private @Nullable Object cacheKey(@Nullable final Object key) {
-        if (this.elementKeyClass.isInstance(key)) {
-            return this.cacheKeyCalc.apply(this.elementKeyClass.cast(key));
-        } else {
-            return null;
-        }
-    }
-
-    private @Nullable Cache<K, V> getCache(final Object elementKey) {
+    protected @Nullable Cache<K, V> getCache(final Object elementKey) {
         @Nullable final Object cacheKey = cacheKey(elementKey);
         @Nullable final Cache<K, V> cache = this.delegates.get(cacheKey);
         return cache;
     }
 
-    private @Nonnull Cache<K, V> getCacheNonNull(final Object elementKey) {
+    protected @Nonnull Cache<K, V> getCacheNonNull(final Object elementKey) {
         @Nullable final Cache<K, V> cache = getCache(elementKey);
         if (cache != null) {
             return cache;
         } else {
             throw noCacheForKey(elementKey);
+        }
+    }
+
+    private @Nullable Object cacheKey(@Nullable final Object key) {
+        if (this.elementKeyClass.isInstance(key)) {
+            return this.cacheKeyCalc.apply(this.elementKeyClass.cast(key));
+        } else {
+            return null;
         }
     }
 
