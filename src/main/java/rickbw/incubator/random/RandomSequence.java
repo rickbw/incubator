@@ -19,6 +19,7 @@ import java.util.Objects;
 import java.util.Random;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import com.google.common.collect.FluentIterable;
 
 
@@ -34,24 +35,10 @@ import com.google.common.collect.FluentIterable;
  */
 public final class RandomSequence {
 
-    /**
-     * TODO: Add support for Java 7 ThreadLocalRandom. One possible approach
-     * would be to add a level of indirection, a "Random Provider", one
-     * implementation of which would wrap a plain Random and another of which
-     * would call <code>ThreadLocalRandom.current()</code>.
-     */
-    private final Random random;
+    private final Supplier<? extends Random> random;
 
 
-    public static RandomSequence newSequence() {
-        return newSequenceUsing(new Random());
-    }
-
-    public static RandomSequence newSequenceWithSeed(final long seed) {
-        return newSequenceUsing(new Random(seed));
-    }
-
-    public static RandomSequence newSequenceUsing(final Random random) {
+    public static RandomSequence from(final Supplier<? extends Random> random) {
         return new RandomSequence(random);
     }
 
@@ -79,7 +66,11 @@ public final class RandomSequence {
         return this.longIterable;
     }
 
-    private RandomSequence(final Random random) {
+    private Random random() {
+        return this.random.get();
+    }
+
+    private RandomSequence(final Supplier<? extends Random> random) {
         this.random = Objects.requireNonNull(random);
     }
 
@@ -102,7 +93,7 @@ public final class RandomSequence {
         private final RandomIterator<Integer> iterator = new RandomIterator<Integer>() {
             @Override
             public Integer next() {
-                return RandomSequence.this.random.nextInt(upperBoundExclusive);
+                return random().nextInt(upperBoundExclusive);
             }
         };
 
@@ -124,7 +115,7 @@ public final class RandomSequence {
         private final RandomIterator<Integer> iterator = new RandomIterator<Integer>() {
             @Override
             public Integer next() {
-                return RandomSequence.this.random.nextInt();
+                return random().nextInt();
             }
         };
 
@@ -138,7 +129,7 @@ public final class RandomSequence {
         private final RandomIterator<Long> iterator = new RandomIterator<Long>() {
             @Override
             public Long next() {
-                return RandomSequence.this.random.nextLong();
+                return random().nextLong();
             }
         };
 
@@ -152,7 +143,7 @@ public final class RandomSequence {
         private final RandomIterator<Double> iterator = new RandomIterator<Double>() {
             @Override
             public Double next() {
-                return RandomSequence.this.random.nextDouble();
+                return random().nextDouble();
             }
         };
 
@@ -166,7 +157,7 @@ public final class RandomSequence {
         private final RandomIterator<Double> iterator = new RandomIterator<Double>() {
             @Override
             public Double next() {
-                return RandomSequence.this.random.nextGaussian();
+                return random().nextGaussian();
             }
         };
 
@@ -180,7 +171,7 @@ public final class RandomSequence {
         private final RandomIterator<Boolean> iterator = new RandomIterator<Boolean>() {
             @Override
             public Boolean next() {
-                return RandomSequence.this.random.nextBoolean();
+                return random().nextBoolean();
             }
         };
 
