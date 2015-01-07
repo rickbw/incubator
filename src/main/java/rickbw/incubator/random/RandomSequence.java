@@ -66,6 +66,26 @@ public final class RandomSequence {
         return this.longIterable;
     }
 
+    @Override
+    public boolean equals(final Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final RandomSequence other = (RandomSequence) obj;
+        return this.random.equals(other.random);
+    }
+
+    @Override
+    public int hashCode() {
+        return 31 + this.random.hashCode();
+    }
+
     private Random random() {
         return this.random.get();
     }
