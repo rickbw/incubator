@@ -142,6 +142,17 @@ public final class ImmutableProduct {
                 + "]";
     }
 
+    /**
+     * An package-private accessor only for the use of the dedicated DAO.
+     */
+    /*package*/ ProductVo getHibernateVo() {
+        return this.state;
+    }
+
+    /*package*/ void setUpdatedProductVo(final ProductVo state) {
+        // TODO
+    }
+
 
     /**
      * Since products are immutable from the application's point of view,
