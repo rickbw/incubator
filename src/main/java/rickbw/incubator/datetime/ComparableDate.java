@@ -1,4 +1,4 @@
-/* Copyright 2014 Rick Warren
+/* Copyright 2014–2015 Rick Warren
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -54,7 +54,7 @@ import javax.annotation.Nullable;
  *      mention because of the implied differences in precision among these
  *      types.</li>
  * </ul>
- *
+ * <p/>
  * This class is serialization-compatible with {@code java.util.Date}.
  */
 public class ComparableDate extends Date {
@@ -76,7 +76,7 @@ public class ComparableDate extends Date {
      *
      * @see Date#Date()
      */
-    public static ComparableDate now() {
+    public static @Nonnull ComparableDate now() {
         return new ComparableDate();
     }
 
@@ -85,7 +85,7 @@ public class ComparableDate extends Date {
      *
      * @see #nullOrCopyOf(Date)
      */
-    public static ComparableDate copyOf(@Nonnull final Date date) {
+    public static @Nonnull ComparableDate copyOf(@Nonnull final Date date) {
         return atMillisSinceEpoch(date.getTime());
     }
 
@@ -95,7 +95,7 @@ public class ComparableDate extends Date {
      *
      * @see #copyOf(Date)
      */
-    public static ComparableDate nullOrCopyOf(@Nullable final Date date) {
+    public static @Nullable ComparableDate nullOrCopyOf(@Nullable final Date date) {
         return (date == null) ? null : copyOf(date);
     }
 
@@ -107,7 +107,7 @@ public class ComparableDate extends Date {
      * @see #atTimeSinceEpoch(long, TimeUnit)
      * @see Date#Date(long)
      */
-    public static ComparableDate atMillisSinceEpoch(final long millis) {
+    public static @Nonnull ComparableDate atMillisSinceEpoch(final long millis) {
         return new ComparableDate(millis);
     }
 
@@ -119,7 +119,7 @@ public class ComparableDate extends Date {
      * @see #atMillisSinceEpoch(long)
      * @see Date#Date(long)
      */
-    public static ComparableDate atTimeSinceEpoch(final long time, @Nonnull final TimeUnit unit) {
+    public static @Nonnull ComparableDate atTimeSinceEpoch(final long time, @Nonnull final TimeUnit unit) {
         return atMillisSinceEpoch(unit.toMillis(time));
     }
 
@@ -145,7 +145,7 @@ public class ComparableDate extends Date {
      * Tests if this date is before, equal to, or after the specified date.
      * The result is consist with the comparisons from
      * {@link DateComparator#ascending()}.
-     *
+     * <p/>
      * <em>Note</em> that this class has a natural ordering that is
      * inconsistent with {@link #equals(Object)} in the case where the given
      * date is a {@link java.sql.Timestamp}.
@@ -183,7 +183,7 @@ public class ComparableDate extends Date {
      *      if they have the same millisecond time values, and this class
      *      honors that behavior.</li>
      * </ol>
-     *
+     * <p/>
      * Equality with {@code java.util.Date} subclasses other than those
      * mentioned here is undefined.
      */
