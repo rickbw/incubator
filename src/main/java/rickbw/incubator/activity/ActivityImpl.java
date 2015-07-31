@@ -124,7 +124,11 @@ import com.google.common.base.Suppliers;
                     }
                 } finally {
                     if (currentExecution.get() == this) {
-                        currentExecution.set(this.parent.isPresent() ? this.parent.get() : null);
+                        if (this.parent.isPresent()) {
+                            currentExecution.set(this.parent.get());
+                        } else {
+                            currentExecution.remove();
+                        }
                     }
                 }
             }

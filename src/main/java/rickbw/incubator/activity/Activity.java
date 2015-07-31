@@ -24,7 +24,7 @@ import com.google.common.base.Supplier;
 
 /**
  * An Activity represents a series of actions carried out by an application.
- * These actions may be done executed any number of times; each is represented
+ * These actions may be executed any number of times; each is represented
  * by an {@link Execution}. An Execution may be parallel or sequential, but as
  * a whole, it has a beginning and an end.
  *
