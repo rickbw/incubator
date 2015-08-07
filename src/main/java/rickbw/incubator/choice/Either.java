@@ -25,7 +25,7 @@ import com.google.common.base.Supplier;
 
 
 /**
- * An immutable pair of elements, in which only one is present. This class is
+ * An immutable pair of elements, of which only one is present. This class is
  * the extension of Guava's {@link Optional} from one choice to two.
  *
  * This class may be used to represent an exclusive choice between a
@@ -36,6 +36,9 @@ import com.google.common.base.Supplier;
  * Unless otherwise specified, the methods of this class neither accept null
  * on their argument lists nor return it. Passing a null with throw
  * {@link NullPointerException}.
+ *
+ * @see Nothing
+ * @see Optional
  */
 public abstract class Either<LEFT, RIGHT> {
     /* Design rationale: This class is designed for fast deterministic
@@ -261,6 +264,7 @@ public abstract class Either<LEFT, RIGHT> {
             return false;
         }
         if (getClass() != obj.getClass()) {
+            // Differentiates left and right here!
             return false;
         }
 
