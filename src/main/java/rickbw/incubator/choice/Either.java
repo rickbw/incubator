@@ -39,6 +39,7 @@ import com.google.common.base.Supplier;
  *
  * @see Nothing
  * @see Optional
+ * @see OneOf3
  */
 public abstract class Either<LEFT, RIGHT> {
     /* Design rationale: This class is designed for fast deterministic
@@ -256,7 +257,7 @@ public abstract class Either<LEFT, RIGHT> {
     }
 
     @Override
-    public final boolean equals(final Object obj) {
+    public boolean equals(final Object obj) {
         if (this == obj) {
             return true;
         }
